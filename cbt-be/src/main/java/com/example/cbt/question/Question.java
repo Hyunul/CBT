@@ -1,6 +1,7 @@
 package com.example.cbt.question;
 
 import com.example.cbt.exam.Exam;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,6 +19,7 @@ public class Question {
     private Long id;
 
     // Exam과 다대일 관계
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_id")
     private Exam exam;
