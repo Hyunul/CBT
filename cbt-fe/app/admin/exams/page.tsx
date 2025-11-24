@@ -14,7 +14,7 @@ export default function AdminExamList() {
   const [exams, setExams] = useState<Exam[]>([]);
 
   useEffect(() => {
-    api<{ data: Exam[] }>("/api/exams")
+    api<{ data: Exam[] }>("/api/exams/published")
       .then((res) => setExams(res.data))
       .catch((err) => console.error(err));
   }, []);
@@ -42,7 +42,7 @@ export default function AdminExamList() {
             </div>
 
             <Link
-              href={`/admin/exams/${exam.id}`}
+              href={`/admin/exams/edit/${exam.id}`}
               className="text-blue-600 hover:underline"
             >
               문제 편집

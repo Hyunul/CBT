@@ -4,7 +4,7 @@ export default function QuestionCard({ q, value, onChange }: any) {
 
   return (
     <div className="border p-4 rounded-lg mb-4 bg-white">
-      <h2 className="font-semibold mb-3">{q.text}</h2>
+      <h2 className="font-semibold mb-3 whitespace-pre-line">{q.text}</h2>
 
       {q.type === "MCQ" ? (
         <ul className="space-y-2">

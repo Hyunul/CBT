@@ -2,6 +2,7 @@ package com.example.cbt.exam;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -69,5 +70,17 @@ public class ExamController {
 
         questionService.replaceAllQuestions(examId, req.questions());
         return ApiResponse.ok(true);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Boolean> deleteExam(@PathVariable Long id) {
+        examService.delete(id);
+        return ApiResponse.ok(true);
+    }
+
+    @GetMapping("/{examId}/average-score")
+    public ApiResponse<Double> getAverageScore(@PathVariable Long examId) {
+        double avg = examService.getAverageGradedScore(examId);
+        return ApiResponse.ok(avg);
     }
 }

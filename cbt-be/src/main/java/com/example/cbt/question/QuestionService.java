@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.cbt.attempt.AttemptRepository;
+import com.example.cbt.attempt.AttemptStatus;
 import com.example.cbt.exam.Exam;
 import com.example.cbt.exam.ExamRepository;
 
@@ -27,9 +28,12 @@ public class QuestionService {
     @Transactional
     public void replaceAllQuestions(Long examId, List<QuestionCreateReq> reqList) {
 
-        // 1) 응시 기록 확인
-        if (attemptRepository.existsByExamId(examId)) {
-            throw new IllegalStateException("이미 응시한 시험은 문제를 수정할 수 없습니다.");
+        // 1) 제출된 Attempt가 존재하는지 검사
+        boolean hasLockedAttempt = attemptRepository
+                .existsByExamIdAndStatusNot(examId, AttemptStatus.IN_PROGRESS);
+
+        if (hasLockedAttempt) {
+            throw new IllegalStateException("제출된 응시 기록이 있어 문제를 수정할 수 없습니다.");
         }
 
         // 2) Exam 존재 확인

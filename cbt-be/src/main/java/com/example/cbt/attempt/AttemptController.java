@@ -1,14 +1,19 @@
 package com.example.cbt.attempt;
 
-import com.example.cbt.attempt.dto.AnswerReq;
-import com.example.cbt.attempt.dto.AttemptDto;
-import com.example.cbt.attempt.dto.StartReq;
-import com.example.cbt.attempt.dto.SubmitRes;
-import com.example.cbt.common.ApiResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.cbt.attempt.dto.AnswerReq;
+import com.example.cbt.attempt.dto.AttemptResultRes;
+import com.example.cbt.common.ApiResponse;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/attempts")
@@ -16,26 +21,28 @@ import java.util.List;
 public class AttemptController {
 
     private final AttemptService attemptService;
+    private final AnswerService answerService;
+    
+    /** 결과 조회 */
+    @GetMapping("/{attemptId}/result")
+    public ApiResponse<AttemptResultRes> result(@PathVariable Long attemptId) {
+        return ApiResponse.ok(attemptService.getResult(attemptId));
+}
 
-    @PostMapping
-    public ApiResponse<AttemptDto> start(@RequestBody StartReq req) {
-        return ApiResponse.ok(attemptService.startAttempt(req.examId(), req.userId()));
+    /** 임시 저장 (답안 저장) */
+    @PostMapping("/{attemptId}/answers")
+    public ApiResponse<Boolean> saveAnswers(
+            @PathVariable Long attemptId,
+            @RequestBody List<AnswerReq> answers
+    ) {
+        answerService.saveAnswers(attemptId, answers);
+        return ApiResponse.ok(true);
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<AttemptDto> get(@PathVariable Long id) {
-        return ApiResponse.ok(attemptService.getAttempt(id));
-    }
-
-    @PostMapping("/{id}/answers")
-    public ApiResponse<Void> upsertAnswers(@PathVariable Long id, @RequestBody List<AnswerReq> answers,
-                                           @RequestParam Long userId) {
-        attemptService.upsertAnswers(id, userId, answers);
-        return ApiResponse.ok();
-    }
-
-    @PostMapping("/{id}/submit")
-    public ApiResponse<SubmitRes> submit(@PathVariable Long id, @RequestParam Long userId) {
-        return ApiResponse.ok(attemptService.submitAndAutoGrade(id, userId));
+    /** 제출 */
+    @PostMapping("/{attemptId}/submit")
+    public ApiResponse<Boolean> submit(@PathVariable Long attemptId) {
+        attemptService.submitAndGrade(attemptId);
+        return ApiResponse.ok(true);
     }
 }
