@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "@/store/useAuth";
+import Link from "next/link";
 
 export default function Navbar() {
   const { token, logout, role } = useAuth();
@@ -13,12 +14,17 @@ export default function Navbar() {
         {token ? (
           <>
             {role === "ADMIN" && (
-              <a
-                href="/admin/grading"
-                className="text-gray-700 hover:text-blue-600"
-              >
-                채점
-              </a>
+              <>
+                <a
+                  href="/admin/grading"
+                  className="text-gray-700 hover:text-blue-600"
+                >
+                  채점
+                </a>
+                <Link href="/admin/exams" className="hover:text-blue-400">
+                  시험 관리
+                </Link>
+              </>
             )}
             <button
               className="text-sm text-gray-600 hover:text-red-500"

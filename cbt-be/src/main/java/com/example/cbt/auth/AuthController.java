@@ -3,11 +3,11 @@ package com.example.cbt.auth;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.cbt.auth.dto.LoginReq;
 import com.example.cbt.auth.dto.LoginRes;
+import com.example.cbt.auth.dto.SignupReq;
 import com.example.cbt.common.ApiResponse;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRole;
@@ -24,10 +24,8 @@ public class AuthController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ApiResponse<User> signup(@RequestParam String email,
-                                    @RequestParam String password,
-                                    @RequestParam(defaultValue = "CANDIDATE") String role) {
-        return ApiResponse.ok(userService.register(email, password, UserRole.valueOf(role)));
+    public ApiResponse<User> signup(@RequestBody SignupReq req) {
+        return ApiResponse.ok(userService.register(req.email(), req.password(), UserRole.valueOf(req.role())));
     }
 
     @PostMapping("/login")
