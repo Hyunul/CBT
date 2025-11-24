@@ -47,9 +47,12 @@ export default function AttemptPage() {
 
   const submitExam = async () => {
     await saveAnswers();
-    await api(`/api/attempts/${id}/submit`, { method: "POST" });
-    alert("제출이 완료되었습니다!");
-    router.push("/");
+
+    const res = await api<{ data: any }>(`/api/attempts/${id}/submit`, {
+      method: "POST",
+    });
+
+    router.push(`/attempts/${id}/review`);
   };
 
   if (!attempt) return <div className="p-8">시험 정보를 불러오는 중...</div>;

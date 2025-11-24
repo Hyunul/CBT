@@ -77,10 +77,4 @@ public class ExamController {
         examService.delete(id);
         return ApiResponse.ok(true);
     }
-
-    @GetMapping("/{examId}/average-score")
-    public ApiResponse<Double> getAverageScore(@PathVariable Long examId) {
-        double avg = examService.getAverageGradedScore(examId);
-        return ApiResponse.ok(avg);
-    }
 }

@@ -10,7 +10,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.cbt.attempt.dto.AnswerReq;
-import com.example.cbt.attempt.dto.AttemptResultRes;
+import com.example.cbt.attempt.dto.AttemptCreateReq;
+import com.example.cbt.attempt.dto.AttemptDetailRes;
+import com.example.cbt.attempt.dto.AttemptReviewRes;
+import com.example.cbt.attempt.dto.AttemptSubmitRes;
 import com.example.cbt.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -22,14 +25,28 @@ public class AttemptController {
 
     private final AttemptService attemptService;
     private final AnswerService answerService;
-    
-    /** 결과 조회 */
-    @GetMapping("/{attemptId}/result")
-    public ApiResponse<AttemptResultRes> result(@PathVariable Long attemptId) {
-        return ApiResponse.ok(attemptService.getResult(attemptId));
-}
 
-    /** 임시 저장 (답안 저장) */
+    /**
+     * 1. Attempt 생성 (시험 시작)
+     */
+    @PostMapping
+    public ApiResponse<Attempt> startAttempt(@RequestBody AttemptCreateReq req) {
+        Attempt attempt = attemptService.startAttempt(req.examId(), req.userId());
+        return ApiResponse.ok(attempt);
+    }
+
+    /**
+     * 2. Attempt 상세 조회 (문제 리스트 포함)
+     *    시험 응시 화면 진입 시 사용
+     */
+    @GetMapping("/{attemptId}")
+    public ApiResponse<AttemptDetailRes> getAttempt(@PathVariable Long attemptId) {
+        return ApiResponse.ok(attemptService.getAttemptDetail(attemptId));
+    }
+
+    /**
+     * 3. 임시 저장 — Answer Upsert
+     */
     @PostMapping("/{attemptId}/answers")
     public ApiResponse<Boolean> saveAnswers(
             @PathVariable Long attemptId,
@@ -39,10 +56,34 @@ public class AttemptController {
         return ApiResponse.ok(true);
     }
 
-    /** 제출 */
+    /**
+     * 4. 제출 + 자동 채점 (status: IN_PROGRESS → SUBMITTED → GRADED)
+     */
     @PostMapping("/{attemptId}/submit")
-    public ApiResponse<Boolean> submit(@PathVariable Long attemptId) {
-        attemptService.submitAndGrade(attemptId);
-        return ApiResponse.ok(true);
+    public ApiResponse<AttemptSubmitRes> submitAttempt(@PathVariable Long attemptId) {
+        AttemptSubmitRes result = attemptService.submitAndGrade(attemptId);
+        return ApiResponse.ok(result);
     }
+
+    /**
+     * 5. 제출 결과 조회 (정답 여부 / 획득 점수 포함)
+     */
+    @GetMapping("/{attemptId}/result")
+    public ApiResponse<AttemptSubmitRes> getResult(@PathVariable Long attemptId) {
+        return ApiResponse.ok(attemptService.getResult(attemptId));
+    }
+
+    @GetMapping("/{attemptId}/review")
+    public ApiResponse<List<AttemptReviewRes>> review(@PathVariable Long attemptId) {
+        return ApiResponse.ok(attemptService.getReview(attemptId));
+    }
+
+    /**
+     * 6. 동일 시험에서 GRADED 상태 Attempt의 평균 점수
+     */
+    // @GetMapping("/{attemptId}/average")
+    // public ApiResponse<Double> getAverageScore(@PathVariable Long attemptId) {
+    //     double avg = attemptService.getAverageScoreByAttemptId(attemptId);
+    //     return ApiResponse.ok(avg);
+    // }
 }

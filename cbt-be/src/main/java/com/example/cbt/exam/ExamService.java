@@ -66,9 +66,4 @@ public class ExamService {
         // 시험 삭제 (문제도 함께 cascade로 삭제됨)
         examRepository.delete(exam);
     }
-
-    public double getAverageGradedScore(Long examId) {
-        Double avg = attemptRepository.findAverageScoreByExamId(examId);
-        return avg != null ? avg : 0.0;
-    }
 }
