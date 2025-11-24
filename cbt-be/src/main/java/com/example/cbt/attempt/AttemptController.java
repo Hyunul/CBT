@@ -65,25 +65,8 @@ public class AttemptController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 5. 제출 결과 조회 (정답 여부 / 획득 점수 포함)
-     */
-    @GetMapping("/{attemptId}/result")
-    public ApiResponse<AttemptSubmitRes> getResult(@PathVariable Long attemptId) {
-        return ApiResponse.ok(attemptService.getResult(attemptId));
-    }
-
     @GetMapping("/{attemptId}/review")
     public ApiResponse<List<AttemptReviewRes>> review(@PathVariable Long attemptId) {
         return ApiResponse.ok(attemptService.getReview(attemptId));
     }
-
-    /**
-     * 6. 동일 시험에서 GRADED 상태 Attempt의 평균 점수
-     */
-    // @GetMapping("/{attemptId}/average")
-    // public ApiResponse<Double> getAverageScore(@PathVariable Long attemptId) {
-    //     double avg = attemptService.getAverageScoreByAttemptId(attemptId);
-    //     return ApiResponse.ok(avg);
-    // }
 }

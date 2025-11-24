@@ -233,43 +233,4 @@ public class AttemptService {
 
         return totalScore;
     }
-
-    /**
-     * 5) 결과 화면 조회
-     */
-    @Transactional(readOnly = true)
-    public AttemptSubmitRes getResult(Long attemptId) {
-        Attempt attempt = attemptRepository.findById(attemptId)
-            .orElseThrow(() -> new RuntimeException("응시 없음"));
-
-        if (attempt.getStatus() != AttemptStatus.GRADED)
-            throw new RuntimeException("아직 채점되지 않았습니다.");
-
-        List<Answer> answers = answerRepository.findByAttemptId(attemptId);
-
-        int correctCnt = (int) answers.stream().filter(a -> a.getIsCorrect()).count();
-
-        return new AttemptSubmitRes(
-                attempt.getId(),
-                attempt.getExamId(),
-                attempt.getTotalScore(),
-                correctCnt,
-                answers.size() - correctCnt,
-                answers.size()
-        );
-    }
-
-    /**
-     * 6) 동일 Exam의 GRADED attempt 평균 점수 계산
-     */
-    @Transactional(readOnly = true)
-    public double getAverageScoreByAttemptId(Long attemptId) {
-
-        Attempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new RuntimeException("Attempt not found"));
-
-        Double avg = attemptRepository.findAverageScoreByExamId(attempt.getExamId());
-
-        return avg != null ? avg : 0.0;
-    }
 }
