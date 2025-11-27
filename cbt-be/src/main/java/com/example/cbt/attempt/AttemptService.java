@@ -15,6 +15,7 @@ import com.example.cbt.exam.ExamRepository;
 import com.example.cbt.question.Question;
 import com.example.cbt.question.QuestionRepository;
 import com.example.cbt.question.QuestionType;
+import com.example.cbt.ranking.SubmissionRankingService;   // ⭐ 추가
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +27,7 @@ public class AttemptService {
     private final AnswerRepository answerRepository;
     private final ExamRepository examRepository;
     private final QuestionRepository questionRepository;
+    private final SubmissionRankingService rankingService;   // ⭐ Redis랭킹 서비스 DI 추가
 
     /**
      * 1) Attempt 생성 (시험 시작)
@@ -77,7 +79,7 @@ public class AttemptService {
     }
 
     /**
-     * 3) Attempt 제출 + 자동 채점
+     * 3) Attempt 제출 + 자동 채점 + Redis 랭킹 반영
      */
     @Transactional
     public AttemptSubmitRes submitAndGrade(Long attemptId) {
@@ -100,12 +102,9 @@ public class AttemptService {
 
             boolean isCorrect = false;
 
-            // 객관식 체크
             if (q.getType() == QuestionType.MCQ) {
                 isCorrect = q.getAnswerKey().equals(ans.getSelectedChoices());
-            }
-            // 주관식 체크 (키워드 포함 여부)
-            else {
+            } else {
                 String[] keys = q.getAnswerKeywords().split(",");
                 for (String key : keys) {
                     if (ans.getResponseText() != null &&
@@ -130,6 +129,9 @@ public class AttemptService {
         answerRepository.saveAll(answers);
         attemptRepository.save(attempt);
 
+        // ⭐ 제출이 성공한 순간 —> Redis 랭킹 증가
+        rankingService.increaseSubmission(attempt.getUserId());
+
         return new AttemptSubmitRes(
                 attempt.getId(),
                 attempt.getExamId(),
@@ -140,6 +142,9 @@ public class AttemptService {
         );
     }
 
+    /**
+     * 오답 리뷰 (문항별 상세)
+     */
     public List<AttemptReviewRes> getReview(Long attemptId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("응시 내역 없음"));
@@ -154,12 +159,9 @@ public class AttemptService {
                     .filter(a -> a.getQuestionId().equals(q.getId()))
                     .findFirst().orElse(null);
 
-            String correctAnswer = "";
-            if (q.getType() == QuestionType.MCQ) {
-                correctAnswer = q.getAnswerKey();
-            } else {
-                correctAnswer = q.getAnswerKeywords();
-            }
+            String correctAnswer = q.getType() == QuestionType.MCQ
+                    ? q.getAnswerKey()
+                    : q.getAnswerKeywords();
 
             list.add(new AttemptReviewRes(
                     q.getId(),
@@ -168,7 +170,7 @@ public class AttemptService {
                     ans != null ? ans.getSelectedChoices() : null,
                     ans != null ? ans.getResponseText() : null,
                     correctAnswer,
-                    ans != null ? ans.getIsCorrect() : false,
+                    ans != null && ans.getIsCorrect(),
                     q.getScore()
             ));
         }
@@ -177,7 +179,7 @@ public class AttemptService {
     }
 
     /**
-     * 4) 자동 채점 (객관식/주관식)
+     * 4) 자동 채점 (개별 채점 호출 가능)
      */
     @Transactional
     public int autoScore(Long attemptId) {
@@ -204,13 +206,13 @@ public class AttemptService {
             switch (q.getType()) {
                 case MCQ -> {
                     if (answer.getSelectedChoices() != null &&
-                            answer.getSelectedChoices().equals(q.getAnswerKey())) {
+                        answer.getSelectedChoices().equals(q.getAnswerKey())) {
                         correct = true;
                     }
                 }
                 case SUBJECTIVE -> {
                     if (answer.getResponseText() != null &&
-                            q.getAnswerKeywords() != null) {
+                        q.getAnswerKeywords() != null) {
 
                         String[] keywords = q.getAnswerKeywords().split(",");
 
