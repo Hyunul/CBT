@@ -2,71 +2,72 @@ package com.example.cbt.attempt;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.cbt.attempt.dto.AnswerReq;
-import com.example.cbt.attempt.dto.AttemptCreateReq;
 import com.example.cbt.attempt.dto.AttemptDetailRes;
+import com.example.cbt.attempt.dto.AttemptHistoryDto;
 import com.example.cbt.attempt.dto.AttemptReviewRes;
 import com.example.cbt.attempt.dto.AttemptSubmitRes;
-import com.example.cbt.common.ApiResponse;
+import com.example.cbt.auth.CustomUserDetails;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/attempts")
 @RequiredArgsConstructor
+@RequestMapping("/api/attempts")
 public class AttemptController {
 
     private final AttemptService attemptService;
-    private final AnswerService answerService;
 
-    /**
-     * 1. Attempt 생성 (시험 시작)
-     */
-    @PostMapping
-    public ApiResponse<Attempt> startAttempt(@RequestBody AttemptCreateReq req) {
-        Attempt attempt = attemptService.startAttempt(req.examId(), req.userId());
-        return ApiResponse.ok(attempt);
+    // --- 1. 시험 시작 (Attempt 생성) ---
+    @PostMapping("/start/{examId}")
+    public ResponseEntity<Long> startAttempt(
+            @PathVariable Long examId,
+            // CustomUserDetails에서 Long userId를 가져올 수 있다고 가정
+            @AuthenticationPrincipal CustomUserDetails userDetails) { 
+        
+        Attempt attempt = attemptService.startAttempt(examId, userDetails.getUserId());
+        return ResponseEntity.ok(attempt.getId());
     }
-
-    /**
-     * 2. Attempt 상세 조회 (문제 리스트 포함)
-     *    시험 응시 화면 진입 시 사용
-     */
+    
+    // --- 2. Attempt 상세 조회 (시험 진행 화면 로딩) ---
     @GetMapping("/{attemptId}")
-    public ApiResponse<AttemptDetailRes> getAttempt(@PathVariable Long attemptId) {
-        return ApiResponse.ok(attemptService.getAttemptDetail(attemptId));
+    public ResponseEntity<AttemptDetailRes> getAttemptDetail(@PathVariable Long attemptId) {
+        AttemptDetailRes detail = attemptService.getAttemptDetail(attemptId);
+        return ResponseEntity.ok(detail);
     }
 
-    /**
-     * 3. 임시 저장 — Answer Upsert
-     */
-    @PostMapping("/{attemptId}/answers")
-    public ApiResponse<Boolean> saveAnswers(
-            @PathVariable Long attemptId,
-            @RequestBody List<AnswerReq> answers
-    ) {
-        answerService.saveAnswers(attemptId, answers);
-        return ApiResponse.ok(true);
-    }
-
-    /**
-     * 4. 제출 + 자동 채점 (status: IN_PROGRESS → SUBMITTED → GRADED)
-     */
+    // --- 3. Attempt 제출 및 채점 ---
     @PostMapping("/{attemptId}/submit")
-    public ApiResponse<AttemptSubmitRes> submitAttempt(@PathVariable Long attemptId) {
+    public ResponseEntity<AttemptSubmitRes> submitAttempt(@PathVariable Long attemptId) {
         AttemptSubmitRes result = attemptService.submitAndGrade(attemptId);
-        return ApiResponse.ok(result);
+        return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/{attemptId}/review")
-    public ApiResponse<List<AttemptReviewRes>> review(@PathVariable Long attemptId) {
-        return ApiResponse.ok(attemptService.getReview(attemptId));
+    // --- 4. 응시 이력 조회 (개인) ---
+    @GetMapping("/history")
+    public ResponseEntity<Page<AttemptHistoryDto>> getAttemptHistory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 10, sort = "startedAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        
+        // userDetails.getUsername()은 JWT 토큰에서 추출한 사용자 ID/Email 식별자입니다.
+        Page<AttemptHistoryDto> history = attemptService.getAttemptHistory(userDetails.getUsername(), pageable);
+        return ResponseEntity.ok(history);
+    }
+
+    // --- 5. 시험 결과/오답 리뷰 ---
+    @GetMapping("/{attemptId}/result")
+    public ResponseEntity<List<AttemptReviewRes>> getAttemptReview(@PathVariable Long attemptId) {
+        List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId);
+        return ResponseEntity.ok(reviewList);
     }
 }

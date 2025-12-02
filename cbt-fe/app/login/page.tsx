@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/store/useAuth";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const { login } = useAuth();
@@ -15,7 +15,7 @@ export default function LoginPage() {
         data: { accessToken: string; userId: number; role: string };
       }>("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
       login(res.data.accessToken, res.data.userId, res.data.role);
       window.location.href = "/";
@@ -30,9 +30,9 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold mb-4 text-center">로그인</h1>
         <input
           className="input mb-2"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          placeholder="아이디"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
         />
         <input
           type="password"

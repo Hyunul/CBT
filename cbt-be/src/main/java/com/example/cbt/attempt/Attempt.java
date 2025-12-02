@@ -1,9 +1,10 @@
 package com.example.cbt.attempt;
 
+import com.example.cbt.exam.Exam;
+import com.example.cbt.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.Instant;
 import java.util.List;
 
@@ -20,20 +21,28 @@ public class Attempt {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long examId;
+    // ManyToOne 관계: Exam 엔티티 참조
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exam_id", nullable = false)
+    private Exam exam; // <--- Exam 객체 참조
 
-    private Long userId;
+    // ManyToOne 관계: User 엔티티 참조
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user; // <--- User 객체 참조
 
     @Enumerated(EnumType.STRING)
-    private AttemptStatus status; // 진행중, 제출됨, 채점완료
+    private AttemptStatus status; // IN_PROGRESS, SUBMITTED, GRADED
 
     @CreationTimestamp
     private Instant startedAt;
 
     private Instant submittedAt;
 
-    private Integer totalScore;
+    // DTO에서 finalScore로 사용되던 필드를 totalScore로 확정
+    private Integer totalScore; 
 
-    @OneToMany(mappedBy = "attemptId", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Answer> answers;
+    // Answer 엔티티에 Attempt attempt 필드가 있다고 가정
+    @OneToMany(mappedBy = "attempt", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<com.example.cbt.attempt.Answer> answers;
 }

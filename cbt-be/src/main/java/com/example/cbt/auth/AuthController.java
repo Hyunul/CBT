@@ -10,7 +10,6 @@ import com.example.cbt.auth.dto.LoginRes;
 import com.example.cbt.auth.dto.SignupReq;
 import com.example.cbt.common.ApiResponse;
 import com.example.cbt.user.User;
-import com.example.cbt.user.UserRole;
 import com.example.cbt.user.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,11 +24,11 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ApiResponse<User> signup(@RequestBody SignupReq req) {
-        return ApiResponse.ok(userService.register(req.email(), req.password(), UserRole.valueOf(req.role())));
+        return ApiResponse.ok(userService.register(req.email(), req.username(), req.password(), req.role()));
     }
 
     @PostMapping("/login")
     public ApiResponse<LoginRes> login(@RequestBody LoginReq req) {
-        return ApiResponse.ok(authService.login(req.email(), req.password()));
+        return ApiResponse.ok(authService.login(req.username(), req.password()));
     }
 }

@@ -7,20 +7,19 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white shadow px-6 py-3 flex justify-between items-center">
-      <a href="/" className="font-bold text-lg text-blue-600">
+      <Link href="/" className="font-bold text-lg text-blue-600">
         CBT Platform
-      </a>
+      </Link>
+
       <div className="flex items-center gap-4">
+        <Link href="/ranking" className="text-gray-700 hover:text-blue-600">
+          랭킹
+        </Link>
+
         {token ? (
           <>
             {role === "ADMIN" && (
               <>
-                <a
-                  href="/admin/grading"
-                  className="text-gray-700 hover:text-blue-600"
-                >
-                  채점
-                </a>
                 <Link href="/admin/exams" className="hover:text-blue-400">
                   시험 관리
                 </Link>
@@ -35,12 +34,12 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <a href="/login" className="text-gray-700 hover:text-blue-600">
+            <Link href="/login" className="text-gray-700 hover:text-blue-600">
               로그인
-            </a>
-            <a href="/signup" className="text-gray-700 hover:text-blue-600">
+            </Link>
+            <Link href="/signup" className="text-gray-700 hover:text-blue-600">
               회원가입
-            </a>
+            </Link>
           </>
         )}
       </div>

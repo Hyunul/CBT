@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("CANDIDATE");
   const [message, setMessage] = useState("");
@@ -12,7 +13,7 @@ export default function SignupPage() {
     try {
       await api("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, username, password, role }),
       });
       setMessage("회원가입 완료! 로그인 해주세요.");
     } catch (err: any) {
@@ -29,6 +30,12 @@ export default function SignupPage() {
           placeholder="이메일"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className="input mb-2"
+          placeholder="아이디"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
         />
         <input
           type="password"

@@ -2,8 +2,6 @@ package com.example.cbt.user;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.Instant;
 
 @Entity
@@ -19,15 +17,17 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
+    private String username; // 로그인 ID
+
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
-    private String password;
+    private String password; // 암호화된 비밀번호
 
-    @Enumerated(EnumType.STRING)
-    private UserRole role; // ADMIN, CANDIDATE
+    @Column(nullable = false)
+    private String role; // USER, ADMIN 등
 
-    @CreationTimestamp
     private Instant createdAt;
 }

@@ -1,10 +1,13 @@
 package com.example.cbt.user;
 
-import lombok.RequiredArgsConstructor;
+import java.time.Instant;
+import java.util.Optional;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -13,13 +16,21 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public User register(String email, String password, UserRole role) {
-        User user = User.builder()
+    @Transactional
+    public User register(String email, String username, String password, String role) {
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new RuntimeException("이미 존재하는 이메일입니다.");
+        }
+
+        User newUser = User.builder()
                 .email(email)
-                .password(passwordEncoder.encode(password))
+                .username(username)
+                .password(passwordEncoder.encode(password)) 
                 .role(role)
+                .createdAt(Instant.now())
                 .build();
-        return userRepository.save(user);
+
+        return userRepository.save(newUser);
     }
 
     public Optional<User> findByEmail(String email) {
