@@ -30,8 +30,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                    .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN") // ★ ROLE_ 접두사 추가
-                    .requestMatchers("/api/**").authenticated() // ★ permitAll() -> authenticated()로 변경
+                    .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers("/api/attempts/**").authenticated()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

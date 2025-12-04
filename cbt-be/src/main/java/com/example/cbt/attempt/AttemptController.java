@@ -5,14 +5,17 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.cbt.attempt.dto.AnswerReq;
 import com.example.cbt.attempt.dto.AttemptDetailRes;
 import com.example.cbt.attempt.dto.AttemptHistoryDto;
 import com.example.cbt.attempt.dto.AttemptReviewRes;
@@ -27,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class AttemptController {
 
     private final AttemptService attemptService;
+    private final AnswerService answerService;
 
     // --- 1. 시험 시작 (Attempt 생성) ---
     @PostMapping("/start/{examId}")
@@ -37,6 +41,15 @@ public class AttemptController {
         
         Attempt attempt = attemptService.startAttempt(examId, userDetails.getUserId());
         return ResponseEntity.ok(attempt.getId());
+    }
+
+    @PostMapping("/{attemptId}/answers")
+    public ResponseEntity<Void> saveAnswers(
+            @PathVariable Long attemptId,
+            @RequestBody List<AnswerReq> reqList) {
+        
+        answerService.saveAnswers(attemptId, reqList);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
     
     // --- 2. Attempt 상세 조회 (시험 진행 화면 로딩) ---

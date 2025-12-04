@@ -16,9 +16,7 @@ public class CustomUserDetails implements UserDetails {
 
     private static final long serialVersionUID = 1L;
 
-    // 프로젝트에서 JPA 엔티티 ID를 Long 타입으로 사용하므로 추가
     private final Long userId; 
-    
     private final String username;
     private final String password;
     private final String role;
@@ -30,10 +28,6 @@ public class CustomUserDetails implements UserDetails {
         this.role = user.getRole();
     }
 
-    /**
-     * 사용자의 권한 목록을 반환합니다.
-     * 여기서는 User 엔티티의 role 필드(예: "ADMIN", "USER")를 사용하여 권한을 부여합니다.
-     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
