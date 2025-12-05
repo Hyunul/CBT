@@ -41,4 +41,6 @@ public class Question {
     private Integer score;
 
     private String tags;
+
+    private String explanation; // 해설
 }

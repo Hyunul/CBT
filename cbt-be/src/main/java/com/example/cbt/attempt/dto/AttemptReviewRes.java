@@ -8,5 +8,6 @@ public record AttemptReviewRes(
         String responseText,      // 사용자가 입력한 주관식 답
         String correctAnswer,     // 객관식 정답 or 주관식 키워드
         Boolean isCorrect,
-        Integer score
+        Integer score,
+        String explanation
 ) {}

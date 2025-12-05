@@ -9,8 +9,8 @@ import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 interface ReviewItem {
   questionId: number;
   questionText: string;
-  questionType: "MCQ" | "SUBJECTIVE";
-  userSelectedChoice: string | null; // MCQ 선택지 키 ('A', 'B' 등)
+  type: "MCQ" | "SUBJECTIVE";
+  selectedChoices: string | null; // MCQ 선택지 키 ('A', 'B' 등)
   responseText: string | null; // 수정: 백엔드 데이터에 맞게 'userResponseText' -> 'responseText'로 변경
   correctAnswer: string; // 정답 텍스트 또는 정답 키
   isCorrect: boolean; // 정답 여부
@@ -24,7 +24,7 @@ interface ReviewItem {
 function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
   // 선택지 JSON 문자열을 배열로 파싱
   const choicesArray: [string, string][] = useMemo(() => {
-    if (item.questionType === "MCQ" && item.choices) {
+    if (item.type === "MCQ" && item.choices) {
       try {
         const choicesObject: Record<string, string> = JSON.parse(item.choices);
         return Object.entries(choicesObject);
@@ -33,20 +33,16 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
       }
     }
     return [];
-  }, [item.choices, item.questionType, item.questionId]);
+  }, [item.choices, item.type, item.questionId]);
 
   // 사용자가 선택한 선택지의 텍스트를 찾습니다. (MCQ의 경우)
   const userChoiceText = useMemo(() => {
-    if (item.questionType === "MCQ" && item.userSelectedChoice) {
-      const found = choicesArray.find(
-        ([key]) => key === item.userSelectedChoice
-      );
-      return found
-        ? `${found[0]}. ${found[1]}`
-        : `선택지 ${item.userSelectedChoice}`;
+    if (item.type === "MCQ" && item.selectedChoices) {
+      const found = choicesArray.find(([key]) => key === item.selectedChoices);
+      return found ? `${found[0]}. ${found[1]}` : `${item.selectedChoices}`;
     }
     return null;
-  }, [item.questionType, item.userSelectedChoice, choicesArray]);
+  }, [item.type, item.selectedChoices, choicesArray]);
 
   const resultColor = item.isCorrect
     ? "bg-green-100 border-green-400"
@@ -60,14 +56,13 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
 
   // 유형에 따라 표시할 답변 값을 결정합니다.
   let userAnswerDisplay: string;
-  const isMCQ = item.questionType === "MCQ";
+  const isMCQ = item.type === "MCQ";
 
   if (isMCQ) {
+    console.log(item);
     userAnswerDisplay =
       userChoiceText ||
-      (item.userSelectedChoice
-        ? `[선택: ${item.userSelectedChoice}]`
-        : "미응답");
+      (item.selectedChoices ? `[선택: ${item.selectedChoices}]` : "미응답");
   } else {
     userAnswerDisplay = item.responseText || "미응답";
   }
@@ -126,7 +121,7 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
         </div>
 
         {/* MCQ 전체 선택지 (선택 사항) */}
-        {item.questionType === "MCQ" && (
+        {item.type === "MCQ" && (
           <div className="mt-4 pt-3 border-t">
             <p className="font-medium text-gray-600 mb-2">모든 선택지:</p>
             <ul className="space-y-1 text-sm">

@@ -17,5 +17,23 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     const text = await res.text();
     throw new Error(text || "Request failed");
   }
-  return res.json();
+  const contentLength = res.headers.get("Content-Length");
+  const contentType = res.headers.get("Content-Type");
+
+  if (
+    (contentLength && parseInt(contentLength) === 0) ||
+    (contentType && !contentType.includes("application/json"))
+  ) {
+    return [] as T;
+  }
+
+  try {
+    return res.json();
+  } catch (e) {
+    console.warn(
+      "API response was not valid JSON, returning empty array/object.",
+      e
+    );
+    return [] as T;
+  }
 }

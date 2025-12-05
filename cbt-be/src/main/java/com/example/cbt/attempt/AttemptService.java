@@ -209,7 +209,8 @@ public class AttemptService {
                     ans != null ? ans.getResponseText() : null,
                     correctAnswer,
                     ans != null && ans.getIsCorrect(),
-                    q.getScore()
+                    q.getScore(),
+                    q.getExplanation()
             );
         }).collect(Collectors.toList());
     }

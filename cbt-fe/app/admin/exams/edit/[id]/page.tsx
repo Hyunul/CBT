@@ -13,6 +13,7 @@ interface Question {
   answerKeywords?: string;
   score: number;
   tags: string;
+  explanation: string;
 }
 
 export default function ExamEditPage() {
@@ -41,10 +42,14 @@ export default function ExamEditPage() {
       {
         text: "",
         type: "MCQ",
-        choices: JSON.stringify(["선택지1", "선택지2"]),
+        choices: JSON.stringify({
+          "1": "선택지1",
+          "2": "선택지2",
+        }),
         answerKey: "",
         score: 5,
         tags: "",
+        explanation: "",
       },
     ]);
   };
@@ -95,7 +100,7 @@ export default function ExamEditPage() {
           key={idx}
           q={q}
           index={idx}
-          onChange={(updated) =>
+          onChange={(updated: any) =>
             setQuestions((prev) =>
               prev.map((item, i) => (i === idx ? updated : item))
             )
