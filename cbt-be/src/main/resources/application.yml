@@ -9,11 +9,25 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        use_sql_comments: true
+        dialect: org.hibernate.dialect.MySQL8Dialect # Specify dialect for MySQL
   data:
     redis:
       host: localhost
       port: 6379
       timeout: 60000
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: cbt-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trust.packages: "*" # Trust all packages for deserialization
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 logging:
   level:
     org.hibernate.SQL: debug

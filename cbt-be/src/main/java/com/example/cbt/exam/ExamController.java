@@ -2,6 +2,11 @@ package com.example.cbt.exam;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,16 +39,33 @@ public class ExamController {
         return ApiResponse.ok(examService.create(exam));
     }
 
+    @GetMapping("/list")
+    public ApiResponse<ExamListRes> listExams() {
+        List<Exam> popularExams = examService.getPopularExams();
+        List<Long> popularExamIds = popularExams.stream().map(Exam::getId).toList();
+        List<Exam> otherExams = examService.getOtherPublishedExams(popularExamIds);
+        ExamListRes examListRes = new ExamListRes(popularExams, otherExams);
+        return ApiResponse.ok(examListRes);
+    }
+
     /** 특정 시험 조회 */
     @GetMapping("/{id}")
     public ApiResponse<Exam> get(@PathVariable Long id) {
         return ApiResponse.ok(examService.get(id));
     }
 
-    /** 공개된 시험 목록 조회 */
+    /** 공개된 시험 목록 조회 (검색 및 페이지네이션) */
     @GetMapping("/published")
-    public ApiResponse<List<Exam>> listPublished() {
-        return ApiResponse.ok(examService.listPublished());
+    public ApiResponse<Page<Exam>> listPublished(
+            @RequestParam(name = "search", required = false) String search,
+            @PageableDefault(size = 9, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ApiResponse.ok(examService.searchPublishedExams(search, pageable));
+    }
+
+    /** 모든 시험 목록 조회 (관리자용) */
+    @GetMapping("/all")
+    public ApiResponse<List<Exam>> listAll() {
+        return ApiResponse.ok(examService.listAll());
     }
 
     /** 시험 공개/비공개 전환 */

@@ -15,27 +15,33 @@ import com.example.cbt.attempt.dto.AttemptReviewRes;
 import com.example.cbt.attempt.dto.AttemptSubmitRes;
 import com.example.cbt.exam.Exam;
 import com.example.cbt.exam.ExamRepository;
+import com.example.cbt.grading.GradingResult;
+import com.example.cbt.grading.GradingService;
+import com.example.cbt.kafka.dto.ExamGradedEvent;
 import com.example.cbt.question.Question; // Question 엔티티 임포트 가정
 import com.example.cbt.question.QuestionRepository; // QuestionRepository 임포트 가정
 import com.example.cbt.question.QuestionType; // QuestionType 임포트 가정
-import com.example.cbt.ranking.SubmissionRankingService; // Redis 랭킹 서비스 임포트 가정
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j 
+@Slf4j
 public class AttemptService {
 
     private final AttemptRepository attemptRepository;
     private final AnswerRepository answerRepository;
     private final ExamRepository examRepository;
     private final QuestionRepository questionRepository;
-    private final SubmissionRankingService rankingService; 
     private final UserRepository userRepository;
+    private final GradingService gradingService;
+    private final KafkaTemplate<String, ExamGradedEvent> kafkaTemplate;
+
+    public static final String TOPIC_EXAM_GRADED = "exam-graded";
 
     /**
      * 1) Attempt 생성 (시험 시작)
@@ -44,8 +50,12 @@ public class AttemptService {
     public Attempt startAttempt(Long examId, Long userId) {
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found with id: " + examId));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        
+        User user = null;
+        if (userId != null) {
+            user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        }
 
         Attempt attempt = Attempt.builder()
                 .exam(exam) // Exam 객체 매핑
@@ -82,9 +92,11 @@ public class AttemptService {
 
         return new AttemptDetailRes(
                 attempt.getId(),
-                exam.getId(), 
+                exam.getId(),
                 exam.getTitle(),
-                questionDtos
+                questionDtos,
+                exam.getDurationSec(),
+                attempt.getStartedAt()
         );
     }
 
@@ -99,68 +111,38 @@ public class AttemptService {
         if (attempt.getStatus() == AttemptStatus.GRADED)
             throw new RuntimeException("이미 채점 완료된 응시입니다.");
 
-        List<Answer> answers = answerRepository.findByAttemptId(attemptId);
-        List<Question> questions = questionRepository.findByExamId(attempt.getExam().getId()); 
-
-        int totalScore = 0;
-        int correctCnt = 0;
-
-        // --- 채점 로직 ---
-        for (Answer ans : answers) {
-            Question q = questions.stream()
-                .filter(qq -> qq.getId().equals(ans.getQuestionId()))
-                .findFirst().orElseThrow(() -> new RuntimeException("Question not found"));
-
-            boolean isCorrect = false;
-            // ... (채점 로직) ...
-            if (q.getType() == QuestionType.MCQ) {
-                isCorrect = q.getAnswerKey().equals(ans.getSelectedChoices());
-            } else {
-                String[] keys = q.getAnswerKeywords().split(",");
-                for (String key : keys) {
-                    if (ans.getResponseText() != null &&
-                        ans.getResponseText().contains(key.trim())) {
-                        isCorrect = true;
-                        break;
-                    }
-                }
-            }
-            // ... (채점 로직 끝) ...
-
-            ans.setIsCorrect(isCorrect);
-            ans.setScoreAwarded((isCorrect ? q.getScore() : 0));
-            
-            if (isCorrect) correctCnt++;
-            totalScore += ans.getScoreAwarded();
-        }
+        GradingResult gradingResult = gradingService.gradeAttempt(attempt);
+        int totalScore = gradingResult.totalScore();
+        int correctCnt = gradingResult.correctCount();
+        List<Answer> gradedAnswers = gradingResult.gradedAnswers();
+        int totalQuestions = gradedAnswers.size();
 
         // Attempt 엔티티 업데이트
         attempt.setTotalScore(totalScore);
         attempt.setStatus(AttemptStatus.GRADED);
         attempt.setSubmittedAt(Instant.now());
 
-        answerRepository.saveAll(answers);
+        answerRepository.saveAll(gradedAnswers);
         attemptRepository.save(attempt);
 
-        // ⭐ 랭킹 서비스 동기화 및 반영 부분 [수정됨]
-        // 1. 응시 횟수 랭킹 증가
-        rankingService.increaseSubmission(attempt.getUser().getId());
-        
-        // 2. 시험 점수 랭킹 업데이트 (시험 ID, 사용자 ID, 최종 점수)
-        rankingService.updateExamRanking(
-            attempt.getExam().getId(), 
-            attempt.getUser().getId(), 
-            totalScore
-        );
-        // ⭐ [수정된 부분 끝]
+        // If the user is not a guest, publish an event to Kafka for ranking update.
+        if (attempt.getUser() != null) {
+            ExamGradedEvent event = new ExamGradedEvent(
+                attempt.getUser().getId(),
+                attempt.getExam().getId(),
+                totalScore
+            );
+            kafkaTemplate.send(TOPIC_EXAM_GRADED, event);
+            log.info("Published ExamGradedEvent to Kafka: {}", event);
+        }
 
         return new AttemptSubmitRes(
             attempt.getId(),
             attempt.getExam().getId(),
-            (int)totalScore,
+            totalScore,
             correctCnt,
-            answers.size() - correctCnt,
-            answers.size()
+            totalQuestions - correctCnt,
+            totalQuestions
         );
     }
 
@@ -168,16 +150,8 @@ public class AttemptService {
      * 4) 응시 이력 조회 (개인)
      */
     @Transactional(readOnly = true)
-    public Page<AttemptHistoryDto> getAttemptHistory(String identifier, Pageable pageable) {
-        // UserRepository.findByUsernameOrEmail(String username, String email) 시그니처에 맞춰 두 번 전달
-        User user = userRepository.findByUsernameOrEmail(identifier, identifier)
-                .orElseThrow(() -> new RuntimeException("User not found: " + identifier));
-        
-        Long userId = user.getId();
-
-        // AttemptRepository에 JOIN FETCH 쿼리 메서드가 구현되어 있어야 함
+    public Page<AttemptHistoryDto> getAttemptHistory(Long userId, Pageable pageable) {
         Page<Attempt> attempts = attemptRepository.findByUserId(userId, pageable);
-
         return attempts.map(AttemptHistoryDto::new);
     }
 
@@ -205,6 +179,7 @@ public class AttemptService {
                     q.getId(),
                     q.getText(),
                     q.getType().name(),
+                    q.getChoices(),
                     ans != null ? ans.getSelectedChoices() : null,
                     ans != null ? ans.getResponseText() : null,
                     correctAnswer,
@@ -214,4 +189,6 @@ public class AttemptService {
             );
         }).collect(Collectors.toList());
     }
+
+
 }

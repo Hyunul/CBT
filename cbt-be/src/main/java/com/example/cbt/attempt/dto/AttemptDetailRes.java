@@ -6,7 +6,9 @@ public record AttemptDetailRes(
     Long attemptId,
     Long examId,
     String examTitle,
-    List<QuestionDto> questions
+    List<QuestionDto> questions,
+    Integer durationSec,
+    java.time.Instant startedAt
 ) {
     public record QuestionDto(
         Long id,

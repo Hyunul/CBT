@@ -1,9 +1,13 @@
-import "@/app/globals.css";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import "./globals.css";
 
-export const metadata = {
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
   title: "CBT Platform",
-  description: "Computer-Based Testing Frontend",
+  description: "A modern Computer-Based Testing Platform.",
 };
 
 export default function RootLayout({
@@ -12,10 +16,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
-      <body className="min-h-screen bg-gray-50 text-gray-900">
-        <Navbar />
-        <main>{children}</main>
+    <html lang="ko" className={inter.className}>
+      <body className="antialiased">
+        <div className="relative flex min-h-screen flex-col bg-background">
+          <Navbar />
+          <main className="flex-1">{children}</main>
+        </div>
       </body>
     </html>
   );

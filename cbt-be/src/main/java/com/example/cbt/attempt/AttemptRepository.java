@@ -16,4 +16,5 @@ public interface AttemptRepository extends JpaRepository<Attempt, Long> {
     Optional<Attempt> findById(Long attemptId);
     @Query("SELECT a FROM Attempt a JOIN FETCH a.exam e WHERE a.user.id = :userId ORDER BY a.startedAt DESC")
     Page<Attempt> findByUserId(Long userId, Pageable pageable);
+
 }

@@ -29,6 +29,6 @@ public class AuthService {
         
         // 토큰 생성 및 반환 로직은 동일
         String token = jwtUtil.generateToken(user.getId(), user.getRole());
-        return new LoginRes(token, user.getId(), user.getRole());
+        return new LoginRes(token, user.getId(), user.getUsername(), user.getRole());
     }
 }

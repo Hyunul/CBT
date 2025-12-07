@@ -2,6 +2,11 @@ package com.example.cbt.exam;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,9 +37,41 @@ public class ExamService {
         return examRepository.findById(id).orElseThrow();
     }
 
-    public List<Exam> listPublished() {
-        return examRepository.findByIsPublishedTrue();
+    @Transactional(readOnly = true)
+    public Page<Exam> searchPublishedExams(String searchTerm, Pageable pageable) {
+        Specification<Exam> spec = (root, query, criteriaBuilder) -> {
+            Predicate predicate = criteriaBuilder.isTrue(root.get("isPublished"));
+
+            if (searchTerm != null && !searchTerm.isBlank()) {
+                predicate = criteriaBuilder.and(
+                    predicate,
+                    criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), "%" + searchTerm.toLowerCase() + "%")
+                );
+            }
+            return predicate;
+        };
+        return examRepository.findAll(spec, pageable);
     }
+
+    public List<Exam> listAll() {
+        return examRepository.findAllByOrderByIdDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Exam> getPopularExams() {
+        return examRepository.findTop10ByIsPublishedTrueOrderByAttemptCountDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Exam> getOtherPublishedExams(List<Long> popularExamIds) {
+        if (popularExamIds == null || popularExamIds.isEmpty()) {
+            return examRepository.findAll(
+                (root, query, criteriaBuilder) -> criteriaBuilder.isTrue(root.get("isPublished"))
+            );
+        }
+        return examRepository.findAllByIsPublishedTrueAndIdNotIn(popularExamIds);
+    }
+
 
     @Transactional
     public Exam publish(Long id, boolean published) {

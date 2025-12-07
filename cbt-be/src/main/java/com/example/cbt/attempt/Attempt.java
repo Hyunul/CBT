@@ -28,7 +28,7 @@ public class Attempt {
 
     // ManyToOne 관계: User 엔티티 참조
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user; // <--- User 객체 참조
 
     @Enumerated(EnumType.STRING)

@@ -2,11 +2,14 @@
 
 import { Lightbulb } from "lucide-react";
 
-// 선택지 파싱
+// 선택지 파싱 (항상 키를 기준으로 정렬)
 const parseChoices = (choices: any) => {
   try {
     if (typeof choices === "string") choices = JSON.parse(choices);
-    return Object.entries(choices || {}).map(([key, text]) => ({ key, text }));
+    // 키(A, B, C...)를 기준으로 항상 정렬하여 순서를 보장합니다.
+    return Object.entries(choices || {})
+      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+      .map(([key, text]) => ({ key, text: text as string }));
   } catch {
     return [];
   }
@@ -18,6 +21,7 @@ const serializeChoices = (arr: { key: string; text: string }[]) => {
   arr.forEach((c) => (obj[c.key] = c.text));
   return JSON.stringify(obj);
 };
+
 function MCQChoicesEditor({ q, onChange }: any) {
   const choicesArray = parseChoices(q.choices);
 
@@ -28,16 +32,20 @@ function MCQChoicesEditor({ q, onChange }: any) {
   };
 
   const addChoice = () => {
-    const nextKey = (choicesArray.length + 1).toString(); // "1", "2", "3"...
+    // 다음 알파벳 키를 생성합니다 (A, B, C...).
+    const nextKey = String.fromCharCode("A".charCodeAt(0) + choicesArray.length);
     const updated = [...choicesArray, { key: nextKey, text: "" }];
     onChange({ ...q, choices: serializeChoices(updated) });
   };
 
   const removeChoice = (index: number) => {
+    // 선택지 삭제 후 키를 알파벳 순으로 재정렬합니다.
     const updated = choicesArray
       .filter((_, i) => i !== index)
-      .map((c, idx) => ({ key: (idx + 1).toString(), text: c.text }));
-    // 삭제 후 키도 자동으로 1,2,3 재정렬
+      .map((c, idx) => ({
+        key: String.fromCharCode("A".charCodeAt(0) + idx),
+        text: c.text,
+      }));
     onChange({ ...q, choices: serializeChoices(updated) });
   };
 

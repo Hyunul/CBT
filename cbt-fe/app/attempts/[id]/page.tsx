@@ -1,12 +1,21 @@
 "use client";
 
 import QuestionCard from "@/components/QuestionCard";
+import Timer from "@/components/Timer";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/useAuth";
+import { useDebouncedCallback } from "use-debounce";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Loader2,
+  Save,
+  ShieldAlert,
+} from "lucide-react";
 
-// ⭐ 백엔드 DTO에 맞춘 인터페이스 정의
 interface QuestionDetail {
   id: number;
   text: string;
@@ -15,133 +24,205 @@ interface QuestionDetail {
   score: number;
 }
 
-interface AttemptDetailRes {
+interface AttemptDetail {
   attemptId: number;
   examId: number;
   examTitle: string;
   questions: QuestionDetail[];
-  // TODO: 여기에 duration, startedAt 등 타이머에 필요한 필드를 추가해야 함.
+  durationSec: number;
+  startedAt: string;
 }
 
 export default function AttemptPage() {
-  const { id } = useParams();
+  const { id: attemptId } = useParams();
   const router = useRouter();
-  const [attempt, setAttempt] = useState<AttemptDetailRes | null>(null);
-  // answers: Record<questionId, answerValue (MCQ: key 'A', 'B' | SUBJECTIVE: text string)>
+  const { userId } = useAuth();
+
+  const [attempt, setAttempt] = useState<AttemptDetail | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const { userId } = useAuth(); // 백엔드 AnswerReq에서 userId를 필요로 함
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // --- Data Fetching ---
   useEffect(() => {
-    const attemptId = Array.isArray(id) ? id[0] : id;
     if (!attemptId) return;
-
-    api<AttemptDetailRes>(`/api/attempts/${attemptId}`)
-      .then((res) => {
-        setAttempt(res); // Attempt 상세 정보 설정
-        // TODO: 기존에 저장된 답이 있다면 answers 상태를 초기화하는 로직 추가 필요
+    api<AttemptDetail>(`/api/attempts/${attemptId}`)
+      .then(setAttempt)
+      .catch((err) => {
+        console.error("Attempt-Detail-Ladefehler:", err);
+        alert("Prüfungsinformationen konnten nicht geladen werden.");
+        router.push("/");
       })
-      .catch((err) => console.error("Attempt 상세 정보 로드 실패:", err));
-  }, [id]);
+      .finally(() => setLoading(false));
+  }, [attemptId, router]);
 
-  const getAttemptId = () => (Array.isArray(id) ? id[0] : id);
+  // --- Answer Handling & Auto-Save ---
+  const handleAnswerChange = useCallback((questionId: number, value: string) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  }, []);
 
-  const saveAnswers = async () => {
-    if (!attempt) return;
-    const attemptId = getAttemptId();
-
-    // AnswerReq DTO에 맞춘 payload 생성
-    const payload = attempt.questions.map((q) => {
-      const answerValue = answers[q.id];
-
-      return {
-        questionId: q.id,
-        // ⭐ 응답 값 매핑 로직 정상화:
-        // MCQ 타입이면 answerValue를 selectedChoices에, 아니면 null
-        selectedChoices: q.type === "MCQ" ? answerValue ?? null : null,
-        // SUBJECTIVE 타입이면 answerValue를 responseText에, 아니면 null
-        responseText: q.type === "SUBJECTIVE" ? answerValue ?? null : null,
-        userId: userId,
-      };
-    });
-
+  const debouncedSave = useDebouncedCallback(async (payload) => {
+    if (!attemptId || payload.length === 0) return;
+    setIsSaving(true);
     try {
       await api(`/api/attempts/${attemptId}/answers`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      alert("답변이 임시 저장되었습니다.");
     } catch (error) {
-      console.error("답변 저장 실패:", error);
-      alert("답변 저장 실패!");
+      console.error("Fehler beim automatischen Speichern:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, 2000); // 2초 디바운스
+
+  useEffect(() => {
+    if (!attempt || Object.keys(answers).length === 0) return;
+    const payload = attempt.questions.map((q) => ({
+      questionId: q.id,
+      selectedChoices: q.type === "MCQ" ? answers[q.id] ?? null : null,
+      responseText: q.type === "SUBJECTIVE" ? answers[q.id] ?? null : null,
+      userId: userId,
+    }));
+    debouncedSave(payload);
+  }, [answers, attempt, userId, debouncedSave]);
+
+  // --- Navigation ---
+  const goToQuestion = (index: number) => {
+    if (attempt && index >= 0 && index < attempt.questions.length) {
+      setCurrentQIndex(index);
     }
   };
+
+  const handleTimeUp = useCallback(async () => {
+    alert("시간이 종료되었습니다. 시험지가 자동으로 제출됩니다.");
+    // 마지막 답안 저장 후 제출
+    if (attempt) {
+      const payload = attempt.questions.map((q) => ({
+        questionId: q.id,
+        selectedChoices: q.type === "MCQ" ? answers[q.id] ?? null : null,
+        responseText: q.type === "SUBJECTIVE" ? answers[q.id] ?? null : null,
+        userId: userId,
+      }));
+      await api(`/api/attempts/${attemptId}/answers`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      await api(`/api/attempts/${attemptId}/submit`, { method: "POST" });
+      router.push(`/attempts/${attemptId}/result`);
+    }
+  }, [attempt, answers, attemptId, userId, router]);
 
   const submitExam = async () => {
-    if (!attempt) return;
-    const attemptId = getAttemptId();
-
-    // 1. 최종 답변 임시 저장
-    await saveAnswers();
-
-    try {
-      // 2. 시험 제출 및 채점 요청
-      await api<{ data: any }>(`/api/attempts/${attemptId}/submit`, {
-        method: "POST",
-      });
-
-      // 3. 리뷰 페이지로 이동
-      router.push(`/attempts/${attemptId}/result`);
-    } catch (error) {
-      console.error("시험 제출 실패:", error);
-      alert("시험 제출 실패!");
-    }
+    if (!confirm("시험을 정말로 제출하시겠습니까?")) return;
+    await handleTimeUp(); // 시간 종료 로직 재활용
   };
 
-  if (!attempt)
+  // --- Render ---
+  if (loading || !attempt) {
     return (
-      <div className="p-8 text-center text-xl">시험 정보를 불러오는 중...</div>
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
     );
+  }
+
+  const currentQuestion = attempt.questions[currentQIndex];
 
   return (
-    <main className="max-w-3xl mx-auto p-8 space-y-8">
-      <div className="border-b pb-4">
-        <h1 className="text-3xl font-extrabold text-gray-800">
-          {attempt.examTitle}
-        </h1>
-        <p className="text-gray-500 mt-1">총 {attempt.questions.length} 문항</p>
-      </div>
-
-      {/* 문제 리스트 */}
-      <div className="space-y-6">
-        {attempt.questions.map((q, index) => (
-          <div key={q.id}>
-            {/* QuestionCard에 문제 번호를 보여주기 위해 q 객체에 인덱스를 추가하거나 QuestionCard 내부에서 처리할 수 있습니다. */}
-            <QuestionCard
-              q={q}
-              value={answers[q.id]}
-              onChange={(v: string) =>
-                setAnswers((prev) => ({ ...prev, [q.id]: v }))
-              }
+    <div className="flex h-screen bg-secondary/50">
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col">
+        {/* Sticky Header */}
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-6 shadow-sm">
+          <h1 className="text-xl font-bold">{attempt.examTitle}</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 text-sm font-semibold">
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> 저장 중...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" /> 저장됨
+                </>
+              )}
+            </div>
+            <Timer
+              startTime={attempt.startedAt}
+              durationSec={attempt.durationSec}
+              onTimeUp={handleTimeUp}
             />
+            <button className="btn-primary" onClick={submitExam}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              시험 제출
+            </button>
           </div>
-        ))}
+        </header>
+
+        {/* Question Area */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto max-w-4xl">
+            <QuestionCard
+              q={currentQuestion}
+              qNumber={currentQIndex + 1}
+              value={answers[currentQuestion.id]}
+              onChange={(v) => handleAnswerChange(currentQuestion.id, v)}
+            />
+            {/* Prev/Next Buttons */}
+            <div className="mt-6 flex justify-between">
+              <button
+                onClick={() => goToQuestion(currentQIndex - 1)}
+                disabled={currentQIndex === 0}
+                className="btn flex items-center gap-2 disabled:opacity-50"
+              >
+                <ArrowLeft className="h-4 w-4" /> 이전
+              </button>
+              <button
+                onClick={() => goToQuestion(currentQIndex + 1)}
+                disabled={currentQIndex === attempt.questions.length - 1}
+                className="btn flex items-center gap-2 disabled:opacity-50"
+              >
+                다음 <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
 
-      {/* 버튼 영역 */}
-      <div className="sticky bottom-0 bg-white border-t pt-4 pb-8 flex justify-end gap-4">
-        <button
-          onClick={saveAnswers}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-150 shadow-sm"
-        >
-          답안 임시 저장
-        </button>
-        <button
-          onClick={submitExam}
-          className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-lg"
-        >
-          시험 제출
-        </button>
-      </div>
-    </main>
+      {/* Right Sidebar - Question Palette */}
+      <aside className="hidden w-64 flex-col border-l bg-background p-4 lg:flex">
+        <p className="mb-4 text-center font-semibold">
+          문제 ({currentQIndex + 1} / {attempt.questions.length})
+        </p>
+        <div className="grid grid-cols-5 gap-2">
+          {attempt.questions.map((q, index) => (
+            <button
+              key={q.id}
+              onClick={() => goToQuestion(index)}
+              className={`flex h-10 w-10 items-center justify-center rounded text-sm font-bold transition-colors
+                ${
+                  index === currentQIndex
+                    ? "ring-2 ring-primary ring-offset-2"
+                    : ""
+                }
+                ${
+                  answers[q.id]
+                    ? "bg-primary/20 text-primary-foreground"
+                    : "bg-secondary"
+                }
+              `}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+        <div className="mt-auto p-2 text-center text-xs text-muted-foreground">
+          <ShieldAlert className="mx-auto mb-2 h-6 w-6 text-destructive/70" />
+          답안은 2초마다 자동으로 저장됩니다. 제출 버튼을 누르면 시험이 즉시 종료됩니다.
+        </div>
+      </aside>
+    </div>
   );
 }

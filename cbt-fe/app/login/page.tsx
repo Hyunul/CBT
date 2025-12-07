@@ -1,57 +1,147 @@
 "use client";
-import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/useAuth";
+import { LogIn } from "lucide-react";
+import Link from "next/link";
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+
+// =========================================================
+// MOCK 구현을 제거하고, 원래의 Next.js 및 프로젝트 모듈을 사용합니다.
+// =========================================================
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const { login } = useAuth();
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const { login } = useAuth();
+    const router = useRouter();
 
-  const handleLogin = async () => {
-    try {
-      const res = await api<{
-        data: { accessToken: string; userId: number; role: string };
-      }>("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      });
-      login(res.data.accessToken, res.data.userId, res.data.role);
-      window.location.href = "/";
-    } catch (err: any) {
-      setError("로그인 실패: " + err.message);
-    }
-  };
+    const handleLogin = async (e: FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        try {
+            const res = await api<{
+                data: {
+                    accessToken: string;
+                    userId: number;
+                    username: string;
+                    role: string;
+                };
+            }>("/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username, password }),
+            });
 
-  return (
-    <main className="flex flex-col items-center justify-center h-screen">
-      <div className="bg-white p-8 rounded shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-4 text-center">로그인</h1>
-        <input
-          className="input mb-2"
-          placeholder="아이디"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          className="input mb-4"
-          placeholder="비밀번호"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
-        <button className="btn-primary w-full" onClick={handleLogin}>
-          로그인
-        </button>
-        <p className="text-sm text-gray-600 mt-3 text-center">
-          아직 계정이 없나요?{" "}
-          <a href="/signup" className="text-blue-600 hover:underline">
-            회원가입
-          </a>
-        </p>
-      </div>
-    </main>
-  );
+            const {
+                accessToken,
+                userId,
+                username: resUsername,
+                role,
+            } = res.data;
+            login(accessToken, userId, resUsername, role);
+
+            // Next.js 라우터를 사용하여 페이지 이동
+            router.push("/");
+        } catch (err: any) {
+            console.error("Login API Error:", err);
+            setError(
+                // 원래의 사용자 친화적인 에러 메시지
+                "로그인에 실패했습니다. 아이디 또는 비밀번호를 확인해주세요."
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="container relative flex h-screen flex-col items-center justify-center">
+            <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+                <div className="flex flex-col space-y-2 text-center">
+                    <LogIn className="mx-auto h-8 w-8 text-indigo-600" />
+                    <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+                        로그인
+                    </h1>
+                    {/* 프로젝트에서 사용하는 Tailwind 클래스 (text-muted-foreground) */}
+                    <p className="text-sm text-muted-foreground">
+                        계정에 로그인하여 시험을 시작하세요.
+                    </p>
+                </div>
+                <div className="grid gap-6">
+                    <form onSubmit={handleLogin}>
+                        <div className="grid gap-4">
+                            <div className="grid gap-2">
+                                <label
+                                    className="text-sm font-medium text-gray-700"
+                                    htmlFor="username"
+                                >
+                                    아이디
+                                </label>
+                                {/* 프로젝트에서 사용하는 Tailwind 클래스 (input) */}
+                                <input
+                                    id="username"
+                                    className="input"
+                                    placeholder="아이디를 입력하세요"
+                                    value={username}
+                                    onChange={(e) =>
+                                        setUsername(e.target.value)
+                                    }
+                                    disabled={loading}
+                                    required
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <label
+                                    className="text-sm font-medium text-gray-700"
+                                    htmlFor="password"
+                                >
+                                    비밀번호
+                                </label>
+                                {/* 프로젝트에서 사용하는 Tailwind 클래스 (input) */}
+                                <input
+                                    id="password"
+                                    type="password"
+                                    className="input"
+                                    placeholder="비밀번호를 입력하세요"
+                                    value={password}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
+                                    disabled={loading}
+                                    required
+                                />
+                            </div>
+                            {error && (
+                                /* JSX 주석 문법 수정 완료 */
+                                <p className="text-sm font-medium text-destructive">
+                                    {error}
+                                </p>
+                            )}
+                            <button
+                                className="btn-primary w-full"
+                                disabled={loading || !username || !password}
+                            >
+                                {loading ? "로그인 중..." : "로그인"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {/* Next.js Link 컴포넌트 사용 */}
+                <p className="px-8 text-center text-sm text-muted-foreground">
+                    아직 계정이 없으신가요?{" "}
+                    <Link
+                        href="/signup"
+                        className="underline underline-offset-4 hover:text-primary"
+                    >
+                        회원가입
+                    </Link>
+                </p>
+            </div>
+        </div>
+    );
 }

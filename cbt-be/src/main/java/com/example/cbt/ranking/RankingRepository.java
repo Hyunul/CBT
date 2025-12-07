@@ -20,6 +20,14 @@ public class RankingRepository {
         ZSetOperations<String, String> zSetOperations = redisTemplate.opsForZSet();
         zSetOperations.add(key, String.valueOf(memberId), score);
     }
+
+    /**
+     * ZSET의 특정 멤버 점수를 원자적으로 증가시킵니다.
+     */
+    public void incrementScore(String key, Long memberId, double delta) {
+        ZSetOperations<String, String> zSetOperations = redisTemplate.opsForZSet();
+        zSetOperations.incrementScore(key, String.valueOf(memberId), delta);
+    }
     
     /**
      * 특정 멤버의 현재 점수(score)를 조회합니다. (submission count 조회에 사용)

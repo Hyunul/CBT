@@ -1,4 +1,4 @@
-export const API_BASE = process.env.API_BASE || "http://localhost:8080";
+export const API_BASE = ""; // process.env.API_BASE || "http://localhost:8080";
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token =
@@ -36,4 +36,27 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     );
     return [] as T;
   }
+}
+
+export interface Exam {
+  id: number;
+  title: string;
+  questionCount: number;
+  durationSec: number;
+  totalScore: number;
+  isPublished: boolean;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+  attemptCount: number;
+}
+
+export interface ExamListRes {
+  popularExams: Exam[];
+  otherExams: Exam[];
+}
+
+export async function getExamList(): Promise<ExamListRes> {
+  const res = await api<{ success: boolean; data: ExamListRes }>("/api/exams/list");
+  return res.data;
 }

@@ -38,8 +38,12 @@ public class AttemptController {
             @PathVariable Long examId,
             // CustomUserDetails에서 Long userId를 가져올 수 있다고 가정
             @AuthenticationPrincipal CustomUserDetails userDetails) { 
-        
-        Attempt attempt = attemptService.startAttempt(examId, userDetails.getUserId());
+
+        Long userId = null;
+        if (userDetails != null) {
+            userId = userDetails.getUserId();
+        }
+        Attempt attempt = attemptService.startAttempt(examId, userId);
         return ResponseEntity.ok(attempt.getId());
     }
 
@@ -72,8 +76,7 @@ public class AttemptController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 10, sort = "startedAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
-        // userDetails.getUsername()은 JWT 토큰에서 추출한 사용자 ID/Email 식별자입니다.
-        Page<AttemptHistoryDto> history = attemptService.getAttemptHistory(userDetails.getUsername(), pageable);
+        Page<AttemptHistoryDto> history = attemptService.getAttemptHistory(userDetails.getUserId(), pageable);
         return ResponseEntity.ok(history);
     }
 
@@ -83,4 +86,5 @@ public class AttemptController {
         List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId);
         return ResponseEntity.ok(reviewList);
     }
+
 }

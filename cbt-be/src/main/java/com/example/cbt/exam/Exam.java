@@ -3,6 +3,7 @@ package com.example.cbt.exam;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.List;
@@ -22,6 +23,12 @@ public class Exam {
 
     @Column(nullable = false)
     private String title;
+
+    @Formula("(select count(q.id) from questions q where q.exam_id = id)")
+    private int questionCount;
+
+    @Formula("(select count(a.id) from attempts a where a.exam_id = id)")
+    private int attemptCount;
 
     private Integer durationSec; // 시험 시간(초)
 

@@ -1,18 +1,17 @@
 package com.example.cbt.ranking;
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import com.example.cbt.ranking.dto.RankDto;
+import com.example.cbt.user.User;
+import com.example.cbt.user.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.cbt.ranking.dto.RankDto;
-import com.example.cbt.user.User;
-import com.example.cbt.user.UserRepository;
-
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,17 +38,7 @@ public class SubmissionRankingService {
      * 전체 응시 횟수 랭킹을 1 증가시킵니다. (횟수 기반 랭킹)
      */
     public void increaseSubmission(Long userId) {
-        double currentCount = getSubmissionCount(userId);
-        // 현재 점수에 1을 더하여 업데이트
-        rankingRepository.updateScore(RANKING_KEY_SUBMISSIONS, userId, currentCount + 1); 
-    }
-
-    /**
-     * Redis에서 현재 응시 횟수를 조회하는 보조 메서드
-     */
-    private double getSubmissionCount(Long userId) {
-        // RankingRepository의 getScore 메서드를 사용하여 조회
-        return rankingRepository.getScore(RANKING_KEY_SUBMISSIONS, userId);
+        rankingRepository.incrementScore(RANKING_KEY_SUBMISSIONS, userId, 1);
     }
 
     /**
@@ -88,6 +77,8 @@ public class SubmissionRankingService {
         // DB에서 사용자 이름 조회 (N+1 방지를 위해 in 쿼리 사용)
         List<User> users = userRepository.findAllById(userIds);
 
+        AtomicInteger rank = new AtomicInteger(1);
+
         // 랭킹 데이터를 RankDto로 변환
         return rankSet.stream()
                 .map(tuple -> {
@@ -96,13 +87,8 @@ public class SubmissionRankingService {
                             .filter(u -> u.getId().equals(userId))
                             .findFirst().orElse(null);
 
-                    // 랭킹은 0부터 시작하므로 인덱스 + 1
-                    // 랭킹 계산은 Redis가 담당하므로, 여기서는 단순히 순서대로 매핑
-                    int rank = 0; // 실제 랭킹은 클라이언트에서 인덱스로 매기거나, Redis RANK 명령으로 가져와야 하나, 
-                                  // 여기서는 순서대로 1부터 매기겠습니다. 
-
                     return new RankDto(
-                            rank + 1, // 임시 순위, 실제 Redis RANK는 다름
+                            rank.getAndIncrement(),
                             userId,
                             user != null ? user.getUsername() : "(탈퇴 사용자)",
                             tuple.getScore()

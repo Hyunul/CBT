@@ -28,10 +28,29 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
-                    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                    // --- Admin Endpoints (most specific) ---
                     .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-                    .requestMatchers("/api/attempts/**").authenticated()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams/all").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/exams").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/exams/**").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/exams/**").hasAuthority("ROLE_ADMIN")
+                    .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/exams/**").hasAuthority("ROLE_ADMIN")
+
+                    // --- Public Endpoints ---
+                    .requestMatchers(
+                            "/swagger-ui/**",
+                            "/v3/api-docs/**",
+                            "/api/auth/signup",
+                            "/api/auth/login"
+                    ).permitAll()
+                    // Allow guest exam flow (starting, taking, submitting, viewing result)
+                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/attempts/start/{examId}").permitAll()
+                    .requestMatchers("/api/attempts/{attemptId}/**").permitAll()
+                    // Allow viewing exams to everyone (this is safe because admin rules for exams are already defined above)
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams", "/api/exams/**", "/api/ranking/**").permitAll()
+
+                    // --- All other requests must be authenticated ---
+                    // This will protect user-specific endpoints like /api/attempts/history
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

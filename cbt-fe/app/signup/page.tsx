@@ -1,62 +1,121 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
+import { UserPlus } from "lucide-react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("CANDIDATE");
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = async () => {
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // 비밀번호 길이 검증 (예시)
+    if (password.length < 4) {
+      setError("비밀번호는 4자 이상이어야 합니다.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
     try {
       await api("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, username, password, role }),
+        // 'role'은 서버에서 기본값(CANDIDATE)으로 처리하도록 클라이언트에서 보내지 않음
+        body: JSON.stringify({ email, username, password, role: "CANDIDATE" }),
       });
-      setMessage("회원가입 완료! 로그인 해주세요.");
+      alert("회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.");
+      window.location.href = "/login";
     } catch (err: any) {
-      setMessage("실패: " + err.message);
+      setError("회원가입에 실패했습니다. 다른 아이디/이메일을 사용해주세요.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <main className="flex flex-col items-center justify-center h-screen">
-      <div className="bg-white p-8 rounded shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-4 text-center">회원가입</h1>
-        <input
-          className="input mb-2"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className="input mb-2"
-          placeholder="아이디"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          className="input mb-2"
-          placeholder="비밀번호"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <select
-          className="input mb-4"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-        >
-          <option value="CANDIDATE">응시자</option>
-          <option value="ADMIN">관리자</option>
-        </select>
-        <button className="btn-primary w-full" onClick={handleSignup}>
-          회원가입
-        </button>
-        {message && <p className="text-sm text-center mt-3">{message}</p>}
+    <div className="container relative flex h-screen flex-col items-center justify-center">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+        <div className="flex flex-col space-y-2 text-center">
+          <UserPlus className="mx-auto h-8 w-8" />
+          <h1 className="text-2xl font-semibold tracking-tight">
+            회원가입
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            CBT 플랫폼을 이용하기 위해 계정을 생성하세요.
+          </p>
+        </div>
+        <div className="grid gap-6">
+          <form onSubmit={handleSignup}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium" htmlFor="email">
+                  이메일
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  className="input"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium" htmlFor="username">
+                  아이디
+                </label>
+                <input
+                  id="username"
+                  className="input"
+                  placeholder="사용할 아이디"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium" htmlFor="password">
+                  비밀번호
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  className="input"
+                  placeholder="비밀번호 (4자 이상)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              {error && (
+                <p className="text-sm font-medium text-destructive">
+                  {error}
+                </p>
+              )}
+              <button className="btn-primary w-full" disabled={loading}>
+                {loading ? "가입 중..." : "동의하고 가입"}
+              </button>
+            </div>
+          </form>
+        </div>
+        <p className="px-8 text-center text-sm text-muted-foreground">
+          이미 계정이 있으신가요?{" "}
+          <Link
+            href="/login"
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            로그인
+          </Link>
+        </p>
       </div>
-    </main>
+    </div>
   );
 }

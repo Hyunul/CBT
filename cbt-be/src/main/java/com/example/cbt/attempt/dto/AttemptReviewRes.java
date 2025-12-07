@@ -4,6 +4,7 @@ public record AttemptReviewRes(
         Long questionId,
         String questionText,
         String type,              // MCQ or SUBJECTIVE
+        String choices,           // All choices for the question (for MCQ)
         String selectedChoices,   // 사용자가 선택한 객관식 답
         String responseText,      // 사용자가 입력한 주관식 답
         String correctAnswer,     // 객관식 정답 or 주관식 키워드
