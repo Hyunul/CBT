@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
+
 
 export const metadata: Metadata = {
   title: "CBT Platform",
@@ -22,6 +24,7 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
         </div>
+        <Toaster />
       </body>
     </html>
   );

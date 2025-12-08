@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { BookCheck, Calendar } from "lucide-react";
 import Pagination from "@/components/Pagination";
+import toast from "react-hot-toast";
 
 interface AttemptHistory {
   attemptId: number;
@@ -35,7 +36,7 @@ export default function MyHistoryPage() {
       })
       .catch((err) => {
         console.error("Failed to fetch attempt history:", err);
-        alert("응시 이력을 불러오는 데 실패했습니다.");
+        toast.error("응시 이력을 불러오는 데 실패했습니다.");
       })
       .finally(() => {
         setLoading(false);

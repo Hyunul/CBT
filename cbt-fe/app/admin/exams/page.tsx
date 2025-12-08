@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Globe, Lock } from "lucide-react"; // 아이콘 임포트
+import toast from "react-hot-toast";
 
 interface Exam {
   id: number;
@@ -20,7 +21,7 @@ export default function AdminExamList() {
       .then((res) => setExams(res.data))
       .catch((err) => {
         console.error(err)
-        alert("시험 목록을 불러오는데 실패했습니다. 관리자 권한을 확인해주세요.")
+        toast.error("시험 목록을 불러오는데 실패했습니다. 관리자 권한을 확인해주세요.")
       });
   }, []);
 

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import QuestionItemEditor from "@/components/QuestionItemEditor";
 import { Lock, Globe } from "lucide-react"; // 아이콘 추가
+import toast from "react-hot-toast";
 
 // 문제의 세부 정보 인터페이스
 interface Question {
@@ -79,11 +80,12 @@ export default function ExamEditPage() {
                 method: "PUT",
                 body: JSON.stringify({ questions }),
             });
-            alert("문제 목록이 저장되었습니다.");
+            toast.success("문제 목록이 저장되었습니다.");
             // 저장 후 관리자 페이지로 돌아가도록 수정
             router.push(`/admin/exams`);
         } catch (err: any) {
-            alert(err.message || "문제 저장 실패");
+            console.error("Save failed:", err);
+            toast.error("문제 저장에 실패했습니다. 다시 시도해주세요.");
         }
     };
 
@@ -104,11 +106,12 @@ export default function ExamEditPage() {
 
             // UI 상태 업데이트
             setExamDetails((prev) => ({ ...prev, isPublic: newStatus }));
-            alert(
+            toast.success(
                 `시험이 ${newStatus ? "공개" : "비공개"} 상태로 전환되었습니다.`
             );
         } catch (err: any) {
-            alert(err.message || "상태 전환 실패");
+            console.error("Toggle status failed:", err);
+            toast.error("상태 전환에 실패했습니다. 다시 시도해주세요.");
         }
     };
 
@@ -122,10 +125,11 @@ export default function ExamEditPage() {
                 method: "DELETE",
             });
 
-            alert("시험이 삭제되었습니다.");
+            toast.success("시험이 삭제되었습니다.");
             router.push("/admin/exams");
         } catch (err: any) {
-            alert(err.message || "삭제 실패");
+            console.error("Delete failed:", err);
+            toast.error("시험 삭제에 실패했습니다. 다시 시도해주세요.");
         }
     };
 

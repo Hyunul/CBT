@@ -5,6 +5,7 @@ import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Input from "@/components/Input";
 
 // =========================================================
 // MOCK 구현을 제거하고, 원래의 Next.js 및 프로젝트 모듈을 사용합니다.
@@ -75,53 +76,26 @@ export default function LoginPage() {
                 <div className="grid gap-6">
                     <form onSubmit={handleLogin}>
                         <div className="grid gap-4">
-                            <div className="grid gap-2">
-                                <label
-                                    className="text-sm font-medium text-gray-700"
-                                    htmlFor="username"
-                                >
-                                    아이디
-                                </label>
-                                {/* 프로젝트에서 사용하는 Tailwind 클래스 (input) */}
-                                <input
-                                    id="username"
-                                    className="input"
-                                    placeholder="아이디를 입력하세요"
-                                    value={username}
-                                    onChange={(e) =>
-                                        setUsername(e.target.value)
-                                    }
-                                    disabled={loading}
-                                    required
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <label
-                                    className="text-sm font-medium text-gray-700"
-                                    htmlFor="password"
-                                >
-                                    비밀번호
-                                </label>
-                                {/* 프로젝트에서 사용하는 Tailwind 클래스 (input) */}
-                                <input
-                                    id="password"
-                                    type="password"
-                                    className="input"
-                                    placeholder="비밀번호를 입력하세요"
-                                    value={password}
-                                    onChange={(e) =>
-                                        setPassword(e.target.value)
-                                    }
-                                    disabled={loading}
-                                    required
-                                />
-                            </div>
-                            {error && (
-                                /* JSX 주석 문법 수정 완료 */
-                                <p className="text-sm font-medium text-destructive">
-                                    {error}
-                                </p>
-                            )}
+                            <Input
+                                id="username"
+                                label="아이디"
+                                placeholder="아이디를 입력하세요"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                disabled={loading}
+                                required
+                            />
+                            <Input
+                                id="password"
+                                label="비밀번호"
+                                type="password"
+                                placeholder="비밀번호를 입력하세요"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading}
+                                required
+                                error={error}
+                            />
                             <button
                                 className="btn-primary w-full"
                                 disabled={loading || !username || !password}

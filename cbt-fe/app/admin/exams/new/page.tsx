@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/store/useAuth";
+import toast from "react-hot-toast";
 
 export default function NewExamPage() {
     const router = useRouter();
@@ -34,7 +35,7 @@ export default function NewExamPage() {
             }),
         });
 
-        alert("시험이 생성되었습니다.");
+        toast.success("시험이 생성되었습니다.");
         router.push(`/admin/exams/edit/${res.data.id}`);
     };
 

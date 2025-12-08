@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/store/useAuth";
+import toast from "react-hot-toast";
 
 export default function ExamDetailPage() {
     const { id } = useParams(); // ←★ 여기
@@ -26,7 +27,8 @@ export default function ExamDetailPage() {
             });
             window.location.href = `/attempts/${res.data.id}`;
         } catch (err) {
-            alert("응시 시작 실패");
+            console.error("Failed to start exam:", err);
+            toast.error("응시 시작에 실패했습니다. 다시 시도해주세요.");
         }
     };
 

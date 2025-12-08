@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
 import { Clock, Hash, Loader2, PlayCircle } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface ExamDetail {
   id: number;
@@ -29,7 +30,7 @@ export default function ExamDetailPage() {
       })
       .catch((err) => {
         console.error("시험 정보 로드 실패:", err);
-        alert("시험 정보를 불러오는 데 실패했습니다.");
+        toast.error("시험 정보를 불러오는 데 실패했습니다.");
         router.push("/"); // 홈으로 리디렉션
       })
       .finally(() => setLoading(false));
@@ -48,7 +49,7 @@ export default function ExamDetailPage() {
       );
       router.push(`/attempts/${attemptId}`);
     } catch (err) {
-      alert("시험 시작에 실패했습니다. 다시 시도해주세요.");
+      toast.error("시험 시작에 실패했습니다. 다시 시도해주세요.");
       console.error(err);
       setStarting(false);
     }

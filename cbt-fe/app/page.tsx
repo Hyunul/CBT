@@ -4,6 +4,7 @@ import { getExamList, Exam } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Clock, Hash, ChevronsUpDown } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ExamListPage() {
   const [popularExams, setPopularExams] = useState<Exam[]>([]);
@@ -20,7 +21,7 @@ export default function ExamListPage() {
       })
       .catch((err) => {
         console.error("시험 목록 불러오기 실패:", err);
-        alert("시험 목록을 불러오는 데 실패했습니다.");
+        toast.error("시험 목록을 불러오는 데 실패했습니다.");
       })
       .finally(() => setLoading(false));
   }, []);

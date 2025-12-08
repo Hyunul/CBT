@@ -15,6 +15,7 @@ import {
   Save,
   ShieldAlert,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface QuestionDetail {
   id: number;
@@ -51,7 +52,7 @@ export default function AttemptPage() {
       .then(setAttempt)
       .catch((err) => {
         console.error("Attempt-Detail-Ladefehler:", err);
-        alert("Prüfungsinformationen konnten nicht geladen werden.");
+        toast.error("시험 정보를 불러오는 데 실패했습니다.");
         router.push("/");
       })
       .finally(() => setLoading(false));
@@ -96,7 +97,7 @@ export default function AttemptPage() {
   };
 
   const handleTimeUp = useCallback(async () => {
-    alert("시간이 종료되었습니다. 시험지가 자동으로 제출됩니다.");
+    toast.info("시간이 종료되었습니다. 시험지가 자동으로 제출됩니다.");
     // 마지막 답안 저장 후 제출
     if (attempt) {
       const payload = attempt.questions.map((q) => ({

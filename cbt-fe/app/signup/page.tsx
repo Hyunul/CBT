@@ -3,34 +3,52 @@ import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { UserPlus } from "lucide-react";
+import toast from "react-hot-toast";
+import Input from "@/components/Input";
+
+import Input from "@/components/Input";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formErrors, setFormErrors] = useState({
+    email: "",
+    username: "",
+    password: "",
+    general: "",
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Reset errors
+    setFormErrors({ email: "", username: "", password: "", general: "" });
+
     // 비밀번호 길이 검증 (예시)
     if (password.length < 4) {
-      setError("비밀번호는 4자 이상이어야 합니다.");
+      setFormErrors((prev) => ({
+        ...prev,
+        password: "비밀번호는 4자 이상이어야 합니다.",
+      }));
       return;
     }
     setLoading(true);
-    setError("");
 
     try {
       await api("/api/auth/signup", {
         method: "POST",
-        // 'role'은 서버에서 기본값(CANDIDATE)으로 처리하도록 클라이언트에서 보내지 않음
         body: JSON.stringify({ email, username, password, role: "CANDIDATE" }),
       });
-      alert("회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.");
-      window.location.href = "/login";
+      toast.success("회원가입이 완료되었습니다. 잠시 후 로그인 페이지로 이동합니다.");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
     } catch (err: any) {
-      setError("회원가입에 실패했습니다. 다른 아이디/이메일을 사용해주세요.");
+      setFormErrors((prev) => ({
+        ...prev,
+        general: "회원가입에 실패했습니다. 다른 아이디/이메일을 사용해주세요.",
+      }));
     } finally {
       setLoading(false);
     }
@@ -51,53 +69,41 @@ export default function SignupPage() {
         <div className="grid gap-6">
           <form onSubmit={handleSignup}>
             <div className="grid gap-4">
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="email">
-                  이메일
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className="input"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="username">
-                  아이디
-                </label>
-                <input
-                  id="username"
-                  className="input"
-                  placeholder="사용할 아이디"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="password">
-                  비밀번호
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  className="input"
-                  placeholder="비밀번호 (4자 이상)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
-              {error && (
+              <Input
+                id="email"
+                label="이메일"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
+                error={formErrors.email}
+              />
+              <Input
+                id="username"
+                label="아이디"
+                placeholder="사용할 아이디"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                required
+                error={formErrors.username}
+              />
+              <Input
+                id="password"
+                label="비밀번호"
+                type="password"
+                placeholder="비밀번호 (4자 이상)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+                error={formErrors.password}
+              />
+              {formErrors.general && (
                 <p className="text-sm font-medium text-destructive">
-                  {error}
+                  {formErrors.general}
                 </p>
               )}
               <button className="btn-primary w-full" disabled={loading}>

@@ -11,6 +11,7 @@ import {
     Target,
     XCircle,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 // === 타입 정의 ===
 interface ReviewItem {
@@ -178,7 +179,7 @@ export default function AttemptResultPage() {
             .then(setReviewList)
             .catch((err) => {
                 console.error("결과 로드 실패:", err);
-                alert("결과를 불러오는 데 실패했습니다.");
+                toast.error("결과를 불러오는 데 실패했습니다.");
             })
             .finally(() => setLoading(false));
     }, [id]);
