@@ -55,6 +55,7 @@ public class QuestionService {
                     .answerKeywords(req.answerKeywords())
                     .score(req.score())
                     .tags(req.tags())
+                    .explanation(req.explanation())
                     .build();
 
             questionRepository.save(q);

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
-import { Toaster } from "react-hot-toast";
+import ToastProvider from "@/components/ToastProvider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -24,7 +24,7 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
         </div>
-        <Toaster />
+        <ToastProvider />
       </body>
     </html>
   );

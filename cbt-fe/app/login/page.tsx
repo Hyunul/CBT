@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/Input";
+import toast from "react-hot-toast";
 
 // =========================================================
 // MOCK 구현을 제거하고, 원래의 Next.js 및 프로젝트 모듈을 사용합니다.
@@ -73,6 +74,7 @@ export default function LoginPage() {
                         계정에 로그인하여 시험을 시작하세요.
                     </p>
                 </div>
+                <button onClick={() => toast.success("토스트 정상 작동!")} className="btn-primary w-full">토스트 테스트</button>
                 <div className="grid gap-6">
                     <form onSubmit={handleLogin}>
                         <div className="grid gap-4">
