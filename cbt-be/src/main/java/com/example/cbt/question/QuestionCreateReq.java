@@ -7,5 +7,6 @@ public record QuestionCreateReq(
         String answerKey,
         String answerKeywords,
         Integer score,
-        String tags
+        String tags,
+        String explanation
 ) {}

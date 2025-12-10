@@ -26,10 +26,36 @@ services:
       - redis_data:/data
     restart: always
 
+  # New: Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # New: Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    restart: always
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:19092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
   # 3. Spring Boot Backend Application
   backend:
     build:
-      context: ./backend # Spring Boot 프로젝트의 root 경로
+      context: ./ # Spring Boot 프로젝트의 root 경로
       dockerfile: Dockerfile
     container_name: cbt-backend
     ports:
@@ -43,10 +69,13 @@ services:
       SPRING_REDIS_HOST: redis
       # Elasticsearch 설정 (Host는 서비스 이름 'elasticsearch'를 사용)
       SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+      # Kafka 설정 (Host는 서비스 이름 'kafka'를 사용)
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
     depends_on:
       - db
       - redis
       - elasticsearch # ELK 스택 추가
+      - kafka
     restart: always
     # 개발 편의를 위해 소스 코드를 마운트하여 실시간 반영(Devtools 등)이 가능하게 할 수도 있습니다.
     # volumes:
