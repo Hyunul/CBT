@@ -190,5 +190,33 @@ public class AttemptService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 6) 답안 저장
+     */
+    @Transactional
+    public void saveAnswers(Long attemptId, List<com.example.cbt.attempt.dto.AnswerReq> reqList) {
+        // 1. Attempt 객체를 먼저 조회 (필수)
+        Attempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found with id: " + attemptId));
+
+        for (com.example.cbt.attempt.dto.AnswerReq req : reqList) {
+
+            // 2. Attempt ID와 Question ID로 기존 답변을 조회합니다.
+            Answer answer = answerRepository
+                    .findByAttemptIdAndQuestionId(attemptId, req.questionId())
+                    .orElse(Answer.builder()
+                            .attempt(attempt) 
+                            .questionId(req.questionId())
+                            .build());
+
+            // 4. 답변 내용 업데이트
+            answer.setSelectedChoices(req.selectedChoices());
+            answer.setResponseText(req.responseText());
+
+            // 5. 저장 (JPA Persist/Merge)
+            answerRepository.save(answer);
+        }
+    }
+
 
 }

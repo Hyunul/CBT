@@ -22,8 +22,12 @@ import com.example.cbt.common.ApiResponse;
 import com.example.cbt.question.BatchQuestionSaveReq;
 import com.example.cbt.question.Question;
 import com.example.cbt.question.QuestionService;
+import com.example.cbt.auth.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import lombok.RequiredArgsConstructor;
+
+import com.example.cbt.exam.dto.ExamSaveReq;
 
 @RestController
 @RequestMapping("/api/exams")
@@ -35,8 +39,9 @@ public class ExamController {
 
     /** 시험 생성 */
     @PostMapping
-    public ApiResponse<Exam> create(@RequestBody Exam exam) {
-        return ApiResponse.ok(examService.create(exam));
+    public ApiResponse<Exam> create(@RequestBody ExamSaveReq req, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails != null ? userDetails.getUserId() : 1L; // Fallback or throw
+        return ApiResponse.ok(examService.create(req, userId));
     }
 
     @GetMapping("/list")
@@ -52,6 +57,15 @@ public class ExamController {
     @GetMapping("/{id}")
     public ApiResponse<Exam> get(@PathVariable Long id) {
         return ApiResponse.ok(examService.get(id));
+    }
+
+    /** 시리즈별 시험 조회 */
+    @GetMapping
+    public ApiResponse<List<Exam>> getExamsBySeries(@RequestParam(required = false) Long seriesId) {
+        if (seriesId != null) {
+            return ApiResponse.ok(examService.getBySeriesId(seriesId));
+        }
+        return ApiResponse.ok(examService.listAll());
     }
 
     /** 공개된 시험 목록 조회 (검색 및 페이지네이션) */

@@ -35,12 +35,16 @@ public class GradingService {
             if (q.getType() == QuestionType.MCQ) {
                 isCorrect = q.getAnswerKey().equals(ans.getSelectedChoices());
             } else {
-                String[] keys = q.getAnswerKeywords().split(",");
-                for (String key : keys) {
-                    if (ans.getResponseText() != null &&
-                        ans.getResponseText().contains(key.trim())) {
-                        isCorrect = true;
-                        break;
+                if (q.getAnswerKeywords() != null && !q.getAnswerKeywords().isEmpty()) {
+                    String[] keys = q.getAnswerKeywords().split(",");
+                    for (String key : keys) {
+                        String trimmedKey = key.trim();
+                        if (!trimmedKey.isEmpty() && 
+                            ans.getResponseText() != null &&
+                            ans.getResponseText().contains(trimmedKey)) {
+                            isCorrect = true;
+                            break;
+                        }
                     }
                 }
             }

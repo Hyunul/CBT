@@ -12,4 +12,9 @@ public interface ExamRepository extends JpaRepository<Exam, Long>, JpaSpecificat
     List<Exam> findByCreatedBy(Long userId);
     List<Exam> findTop10ByIsPublishedTrueOrderByAttemptCountDesc();
     List<Exam> findAllByIsPublishedTrueAndIdNotIn(List<Long> ids);
+    
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"series"})
+    List<Exam> findBySeriesIdOrderByRoundAsc(Long seriesId);
+
+    boolean existsBySeriesId(Long seriesId);
 }

@@ -19,17 +19,37 @@ import com.example.cbt.question.QuestionRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import com.example.cbt.exam.dto.ExamSaveReq;
+import com.example.cbt.exam.series.ExamSeries;
+import com.example.cbt.exam.series.ExamSeriesRepository;
+
 @Service
 @RequiredArgsConstructor
 public class ExamService {
 
     private final ExamRepository examRepository;
+    private final ExamSeriesRepository examSeriesRepository;
     private final QuestionRepository questionRepository;
     private final AttemptRepository attemptRepository;
     private final AnswerRepository answerRepository;
 
     @Transactional
-    public Exam create(Exam exam) {
+    public Exam create(ExamSaveReq req, Long userId) {
+        ExamSeries series = null;
+        if (req.getSeriesId() != null) {
+            series = examSeriesRepository.findById(req.getSeriesId())
+                .orElseThrow(() -> new RuntimeException("Series not found"));
+        }
+
+        Exam exam = Exam.builder()
+                .title(req.getTitle())
+                .durationSec(req.getDurationSec())
+                .series(series)
+                .round(req.getRound())
+                .isPublished(req.isPublished())
+                .createdBy(userId)
+                .build();
+        
         return examRepository.save(exam);
     }
 
@@ -55,6 +75,10 @@ public class ExamService {
 
     public List<Exam> listAll() {
         return examRepository.findAllByOrderByIdDesc();
+    }
+
+    public List<Exam> getBySeriesId(Long seriesId) {
+        return examRepository.findBySeriesIdOrderByRoundAsc(seriesId);
     }
 
     @Transactional(readOnly = true)

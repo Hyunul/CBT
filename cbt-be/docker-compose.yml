@@ -1,18 +1,20 @@
 version: "3.8"
 
 services:
-  # 1. PostgreSQL Database
+  # 1. MySQL Database
   db:
-    image: postgres:15-alpine
-    container_name: cbt-postgres
+    image: mysql:8.0
+    container_name: cbt-mysql
     ports:
-      - "5432:5432"
+      - "3306:3306"
     environment:
-      POSTGRES_DB: cbt_platform
-      POSTGRES_USER: cbt_user
-      POSTGRES_PASSWORD: cbt_password # 개발 환경에서 사용
+      MYSQL_DATABASE: cbt_platform
+      MYSQL_USER: cbt_user
+      MYSQL_PASSWORD: cbt_password
+      MYSQL_ROOT_PASSWORD: root_password
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     restart: always
 
   # 2. Redis Cache & Ranking Store
@@ -62,7 +64,7 @@ services:
       - "8080:8080"
     environment:
       # DB 설정 (Host는 서비스 이름 'db'를 사용)
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/cbt_platform
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: cbt_user
       SPRING_DATASOURCE_PASSWORD: cbt_password
       # Redis 설정 (Host는 서비스 이름 'redis'를 사용)
@@ -84,7 +86,7 @@ services:
   # 4. Next.js Frontend Application
   frontend:
     build:
-      context: ./frontend # Next.js 프로젝트의 root 경로
+      context: ../cbt-fe # Next.js 프로젝트의 root 경로 (cbt-be 기준 상위 디렉토리의 cbt-fe)
       dockerfile: Dockerfile
     container_name: cbt-frontend
     ports:
@@ -129,6 +131,6 @@ services:
     restart: always
 
 volumes:
-  postgres_data:
+  mysql_data:
   redis_data:
   elasticsearch_data:

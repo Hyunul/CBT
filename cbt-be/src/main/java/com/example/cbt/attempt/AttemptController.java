@@ -30,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 public class AttemptController {
 
     private final AttemptService attemptService;
-    private final AnswerService answerService;
 
     // --- 1. 시험 시작 (Attempt 생성) ---
     @PostMapping("/start/{examId}")
@@ -52,7 +51,7 @@ public class AttemptController {
             @PathVariable Long attemptId,
             @RequestBody List<AnswerReq> reqList) {
         
-        answerService.saveAnswers(attemptId, reqList);
+        attemptService.saveAnswers(attemptId, reqList);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
     

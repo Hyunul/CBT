@@ -58,11 +58,20 @@ export const useAuth = create<AuthStore>((set) => ({
 
 // 초기화: 새로고침 후 로그인 유지
 if (typeof window !== "undefined") {
-    // Clear localStorage on initial load to prevent issues with expired tokens
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("username");
-    localStorage.removeItem("role");
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    const username = localStorage.getItem("username");
+    const role = localStorage.getItem("role");
 
-    useAuth.setState({ isLoaded: true });
+    if (token && userId) {
+        useAuth.setState({
+            token,
+            userId: Number(userId),
+            username: username || "",
+            role: role || "",
+            isLoaded: true,
+        });
+    } else {
+        useAuth.setState({ isLoaded: true });
+    }
 }

@@ -1,4 +1,4 @@
-export const API_BASE = ""; // process.env.API_BASE || "http://localhost:8080";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token =
@@ -49,6 +49,11 @@ export interface Exam {
   createdAt: string;
   updatedAt: string;
   attemptCount: number;
+  round?: number;
+  series?: {
+    id: number;
+    name: string;
+  };
 }
 
 export interface ExamListRes {
