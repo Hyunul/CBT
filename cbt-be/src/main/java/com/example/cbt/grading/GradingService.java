@@ -27,9 +27,8 @@ public class GradingService {
         int correctCnt = 0;
 
         for (Answer ans : answers) {
-            Question q = questions.stream()
-                .filter(qq -> qq.getId().equals(ans.getQuestionId()))
-                .findFirst().orElseThrow(() -> new RuntimeException("Question not found"));
+            Question q = ans.getQuestion();
+            if (q == null) continue;
 
             boolean isCorrect = false;
             if (q.getType() == QuestionType.MCQ) {

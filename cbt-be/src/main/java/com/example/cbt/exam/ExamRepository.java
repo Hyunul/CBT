@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface ExamRepository extends JpaRepository<Exam, Long>, JpaSpecificationExecutor<Exam> {
     List<Exam> findAllByOrderByIdDesc();
-    List<Exam> findByCreatedBy(Long userId);
+    List<Exam> findByAuthorId(Long userId);
     List<Exam> findTop10ByIsPublishedTrueOrderByAttemptCountDesc();
     List<Exam> findAllByIsPublishedTrueAndIdNotIn(List<Long> ids);
     

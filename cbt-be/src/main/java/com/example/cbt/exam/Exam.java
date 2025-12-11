@@ -44,10 +44,12 @@ public class Exam {
 
     private Integer totalScore; // 총점
 
+    @Column(nullable = false)
     private boolean isPublished; // 공개 여부
 
-    @Column(nullable = false)
-    private Long createdBy; // 작성자 ID (User 엔티티를 직접 참조하지 않고 ID만 참조)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private com.example.cbt.user.User author;
 
     @CreationTimestamp
     private Instant createdAt;
@@ -55,8 +57,7 @@ public class Exam {
     @UpdateTimestamp
     private Instant updatedAt;
 
-    // 단방향 관계: Question 엔티티에 Attempt 객체가 아닌 Exam 객체를 참조한다고 가정
-    // Question 클래스가 다른 패키지(com.example.cbt.question)에 있다고 가정
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<com.example.cbt.question.Question> questions;
 }

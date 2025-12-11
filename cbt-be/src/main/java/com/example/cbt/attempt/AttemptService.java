@@ -168,7 +168,7 @@ public class AttemptService {
 
         return questions.stream().map(q -> {
              Answer ans = answers.stream()
-                    .filter(a -> a.getQuestionId().equals(q.getId()))
+                    .filter(a -> a.getQuestion().getId().equals(q.getId()))
                     .findFirst().orElse(null);
 
             String correctAnswer = q.getType() == QuestionType.MCQ
@@ -199,15 +199,26 @@ public class AttemptService {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("Attempt not found with id: " + attemptId));
 
+        // Pre-fetch questions map to avoid N+1 and set Question entity
+        java.util.Map<Long, Question> questionMap = questionRepository.findByExamId(attempt.getExam().getId())
+                .stream().collect(Collectors.toMap(Question::getId, q -> q));
+
         for (com.example.cbt.attempt.dto.AnswerReq req : reqList) {
 
             // 2. Attempt ID와 Question ID로 기존 답변을 조회합니다.
             Answer answer = answerRepository
                     .findByAttemptIdAndQuestionId(attemptId, req.questionId())
-                    .orElse(Answer.builder()
-                            .attempt(attempt) 
-                            .questionId(req.questionId())
-                            .build());
+                    .orElse(null);
+            
+            if (answer == null) {
+                Question question = questionMap.get(req.questionId());
+                if (question == null) continue; // Invalid question ID
+
+                answer = Answer.builder()
+                        .attempt(attempt) 
+                        .question(question)
+                        .build();
+            }
 
             // 4. 답변 내용 업데이트
             answer.setSelectedChoices(req.selectedChoices());

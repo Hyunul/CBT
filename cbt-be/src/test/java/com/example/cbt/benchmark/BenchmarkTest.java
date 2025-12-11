@@ -206,7 +206,7 @@ public class BenchmarkTest {
             // Pre-save some answers
             List<Answer> answers = testQuestions.stream().map(q -> Answer.builder()
                 .attempt(att)
-                .questionId(q.getId())
+                .question(q)
                 .selectedChoices("A") // Correct answer
                 .build()).collect(Collectors.toList());
             answerRepository.saveAll(answers);

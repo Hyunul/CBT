@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.Instant;
 
@@ -16,6 +17,7 @@ import java.time.Instant;
 @Builder
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "exam_series")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ExamSeries {
 
     @Id
@@ -34,4 +36,8 @@ public class ExamSeries {
 
     @LastModifiedDate
     private Instant updatedAt;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @OneToMany(mappedBy = "series", fetch = FetchType.LAZY)
+    private java.util.List<com.example.cbt.exam.Exam> exams;
 }

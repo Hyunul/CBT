@@ -30,7 +30,7 @@ export default function Navbar() {
                             >
                                 나의 응시 이력
                             </Link>
-                            {role === "ADMIN" && (
+                            {role === "ROLE_ADMIN" && (
                                 <Link
                                     href="/admin/exams"
                                     className="text-foreground/60 transition-colors hover:text-foreground/80"

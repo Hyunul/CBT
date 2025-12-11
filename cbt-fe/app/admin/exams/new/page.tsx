@@ -3,40 +3,33 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/store/useAuth";
 import toast from "react-hot-toast";
 
 export default function NewExamPage() {
     const router = useRouter();
-    const { userId } = useAuth();
 
     // 상태값들
     const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
     const [durationSec, setDurationSec] = useState(600);
-    const [passScore, setPassScore] = useState(0);
-    const [category, setCategory] = useState("");
-    const [tags, setTags] = useState("");
     const [published, setPublished] = useState(false);
-    const totalScore = 100;
-    const createExam = async () => {
-        const res = await api<{ data: any }>("/api/exams", {
-            method: "POST",
-            body: JSON.stringify({
-                title,
-                description,
-                durationSec,
-                totalScore,
-                passScore,
-                category,
-                tags,
-                published,
-                createdBy: userId,
-            }),
-        });
 
-        toast.success("시험이 생성되었습니다.");
-        router.push(`/admin/exams/edit/${res.data.id}`);
+    const createExam = async () => {
+        try {
+            const res = await api<{ data: any }>("/api/exams", {
+                method: "POST",
+                body: JSON.stringify({
+                    title,
+                    durationSec,
+                    isPublished: published,
+                }),
+            });
+
+            toast.success("시험이 생성되었습니다.");
+            router.push(`/admin/exams/edit/${res.data.id}`);
+        } catch (error) {
+            toast.error("시험 생성에 실패했습니다.");
+            console.error(error);
+        }
     };
 
     return (
@@ -54,18 +47,6 @@ export default function NewExamPage() {
                 />
             </div>
 
-            {/* 설명 */}
-            <div>
-                <label className="block font-semibold mb-1">설명</label>
-                <textarea
-                    className="w-full border p-2 rounded"
-                    placeholder="시험에 대한 설명을 입력하세요"
-                    value={description}
-                    rows={3}
-                    onChange={(e) => setDescription(e.target.value)}
-                />
-            </div>
-
             {/* 제한시간 */}
             <div>
                 <label className="block font-semibold mb-1">
@@ -76,45 +57,6 @@ export default function NewExamPage() {
                     className="w-full border p-2 rounded"
                     value={durationSec}
                     onChange={(e) => setDurationSec(Number(e.target.value))}
-                />
-            </div>
-
-            {/* 점수 */}
-            <div className="flex gap-4">
-                <div className="flex-1">
-                    <label className="block font-semibold mb-1">
-                        합격 점수
-                    </label>
-                    <input
-                        type="number"
-                        className="w-full border p-2 rounded"
-                        value={passScore}
-                        onChange={(e) => setPassScore(Number(e.target.value))}
-                    />
-                </div>
-            </div>
-
-            {/* 카테고리 / 난이도 */}
-            <div className="flex gap-4">
-                <div className="flex-1">
-                    <label className="block font-semibold mb-1">카테고리</label>
-                    <input
-                        className="w-full border p-2 rounded"
-                        placeholder="예) NCS, IT, 국어 등"
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            {/* 태그 */}
-            <div>
-                <label className="block font-semibold mb-1">태그</label>
-                <input
-                    className="w-full border p-2 rounded"
-                    placeholder="쉼표로 구분 (예: NCS, 의사소통, 문제해결)"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
                 />
             </div>
 

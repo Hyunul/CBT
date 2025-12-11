@@ -38,7 +38,7 @@ export default function SignupPage() {
     try {
       await api("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, username, password, role: "CANDIDATE" }),
+        body: JSON.stringify({ email, username, password, role: "ROLE_USER" }),
       });
       toast.success("회원가입이 완료되었습니다. 잠시 후 로그인 페이지로 이동합니다.");
       setTimeout(() => {

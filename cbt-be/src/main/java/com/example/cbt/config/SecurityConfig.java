@@ -35,13 +35,16 @@ public class SecurityConfig {
                     .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/exams/**").hasAuthority("ROLE_ADMIN")
                     .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/exams/**").hasAuthority("ROLE_ADMIN")
                     .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/exams/**").hasAuthority("ROLE_ADMIN")
+                    // New Admin-only endpoint for fetching questions with answers
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams/*/questions/admin").hasAuthority("ROLE_ADMIN")
 
                     // --- Public Endpoints ---
                     .requestMatchers(
                             "/swagger-ui/**",
                             "/v3/api-docs/**",
                             "/api/auth/signup",
-                            "/api/auth/login"
+                            "/api/auth/login",
+                            "/api/series/**"
                     ).permitAll()
                     // Allow guest exam flow (starting, taking, submitting, viewing result)
                     .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/attempts/start/{examId}").permitAll()

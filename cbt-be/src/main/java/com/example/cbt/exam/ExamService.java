@@ -2,6 +2,7 @@ package com.example.cbt.exam;
 
 import java.util.List;
 
+import com.example.cbt.question.QuestionRes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -22,11 +23,14 @@ import lombok.RequiredArgsConstructor;
 import com.example.cbt.exam.dto.ExamSaveReq;
 import com.example.cbt.exam.series.ExamSeries;
 import com.example.cbt.exam.series.ExamSeriesRepository;
+import com.example.cbt.user.User;
+import com.example.cbt.user.UserRepository;
 
 @Service
 @RequiredArgsConstructor
 public class ExamService {
 
+    private final UserRepository userRepository;
     private final ExamRepository examRepository;
     private final ExamSeriesRepository examSeriesRepository;
     private final QuestionRepository questionRepository;
@@ -35,6 +39,9 @@ public class ExamService {
 
     @Transactional
     public Exam create(ExamSaveReq req, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         ExamSeries series = null;
         if (req.getSeriesId() != null) {
             series = examSeriesRepository.findById(req.getSeriesId())
@@ -47,7 +54,7 @@ public class ExamService {
                 .series(series)
                 .round(req.getRound())
                 .isPublished(req.isPublished())
-                .createdBy(userId)
+                .author(user)
                 .build();
         
         return examRepository.save(exam);
@@ -96,7 +103,6 @@ public class ExamService {
         return examRepository.findAllByIsPublishedTrueAndIdNotIn(popularExamIds);
     }
 
-
     @Transactional
     public Exam publish(Long id, boolean published) {
         Exam e = get(id);
@@ -104,7 +110,13 @@ public class ExamService {
         return examRepository.save(e);
     }
 
-    public List<Question> getQuestions(Long examId) {
+    public List<QuestionRes> getQuestions(Long examId) {
+        return questionRepository.findByExamId(examId).stream()
+                .map(QuestionRes::from)
+                .toList();
+    }
+
+    public List<Question> getQuestionsWithAnswers(Long examId) {
         return questionRepository.findByExamId(examId);
     }
 

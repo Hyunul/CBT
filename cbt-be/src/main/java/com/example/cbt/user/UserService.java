@@ -17,9 +17,17 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public User register(String email, String username, String password, String role) {
+    public User register(String email, String username, String password, String roleStr) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("이미 존재하는 이메일입니다.");
+        }
+
+        Role role;
+        if ("ADMIN".equalsIgnoreCase(roleStr) || "ROLE_ADMIN".equalsIgnoreCase(roleStr)) {
+            role = Role.ROLE_ADMIN;
+        } else {
+            // Default to USER for CANDIDATE or others
+            role = Role.ROLE_USER;
         }
 
         User newUser = User.builder()
@@ -27,7 +35,6 @@ public class UserService {
                 .username(username)
                 .password(passwordEncoder.encode(password)) 
                 .role(role)
-                .createdAt(Instant.now())
                 .build();
 
         return userRepository.save(newUser);

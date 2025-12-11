@@ -38,6 +38,13 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 }
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+}
+
 export interface Exam {
   id: number;
   title: string;
@@ -45,7 +52,7 @@ export interface Exam {
   durationSec: number;
   totalScore: number;
   isPublished: boolean;
-  createdBy: number;
+  author: User; // Changed from createdBy: number
   createdAt: string;
   updatedAt: string;
   attemptCount: number;
@@ -54,6 +61,12 @@ export interface Exam {
     id: number;
     name: string;
   };
+}
+
+export interface ExamSeries {
+  id: number;
+  name: string;
+  description: string;
 }
 
 export interface ExamListRes {

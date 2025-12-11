@@ -40,8 +40,8 @@ export default function ExamEditPage() {
     useEffect(() => {
         if (!id) return;
 
-        // 1. 문제 목록 로딩
-        api<{ data: Question[] }>(`/api/exams/${id}/questions`)
+        // 1. 문제 목록 로딩 (관리자용: 정답 포함)
+        api<{ data: Question[] }>(`/api/exams/${id}/questions/admin`)
             .then((res) => setQuestions(res.data))
             .catch((err) => console.error(err));
 

@@ -28,6 +28,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import lombok.RequiredArgsConstructor;
 
 import com.example.cbt.exam.dto.ExamSaveReq;
+import com.example.cbt.question.QuestionRes;
 
 @RestController
 @RequestMapping("/api/exams")
@@ -88,10 +89,16 @@ public class ExamController {
         return ApiResponse.ok(examService.publish(id, on));
     }
 
-    /** 특정 시험의 문제 목록 조회 */
+    /** 특정 시험의 문제 목록 조회 (보안: 정답 제외) */
     @GetMapping("/{id}/questions")
-    public ApiResponse<List<Question>> questions(@PathVariable Long id) {
+    public ApiResponse<List<QuestionRes>> questions(@PathVariable Long id) {
         return ApiResponse.ok(examService.getQuestions(id));
+    }
+
+    /** 관리자용 문제 목록 조회 (정답 포함) */
+    @GetMapping("/{id}/questions/admin")
+    public ApiResponse<List<Question>> questionsAdmin(@PathVariable Long id) {
+        return ApiResponse.ok(examService.getQuestionsWithAnswers(id));
     }
 
     /** 

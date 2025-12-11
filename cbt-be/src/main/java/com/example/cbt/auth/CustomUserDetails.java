@@ -7,6 +7,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.example.cbt.user.Role;
 import com.example.cbt.user.User;
 
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class CustomUserDetails implements UserDetails {
     private final Long userId; 
     private final String username;
     private final String password;
-    private final String role;
+    private final Role role;
 
     public CustomUserDetails(User user) {
         this.userId = user.getId();
@@ -30,8 +31,9 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+        return Collections.singletonList(new SimpleGrantedAuthority(role.name()));
     }
+
 
     @Override
     public String getPassword() {

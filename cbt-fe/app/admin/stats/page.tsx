@@ -41,7 +41,7 @@ export default function AdminStatsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (role !== "ADMIN") return;
+    if (role !== "ROLE_ADMIN") return;
     loadStats();
   }, [role]);
 
@@ -56,7 +56,7 @@ export default function AdminStatsPage() {
     }
   };
 
-  if (role !== "ADMIN") {
+  if (role !== "ROLE_ADMIN") {
     return (
       <main className="flex items-center justify-center h-screen">
         <p className="text-gray-500">관리자 전용 페이지입니다.</p>

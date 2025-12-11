@@ -12,6 +12,6 @@ import org.springframework.stereotype.Repository;
 public interface AnswerRepository extends JpaRepository<Answer, Long> {
     List<Answer> findByAttemptId(Long attemptId);
     void deleteByAttemptId(Long attemptId);
-    @Query("SELECT a FROM Answer a WHERE a.attempt.id = :attemptId AND a.questionId = :questionId")
+    @Query("SELECT a FROM Answer a WHERE a.attempt.id = :attemptId AND a.question.id = :questionId")
     Optional<Answer> findByAttemptIdAndQuestionId(@Param("attemptId") Long attemptId, @Param("questionId") Long questionId);
 }

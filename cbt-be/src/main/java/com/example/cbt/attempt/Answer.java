@@ -28,7 +28,9 @@ public class Answer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long questionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id", nullable = false)
+    private com.example.cbt.question.Question question;
 
     // private Long attemptId; // ❌ 제거: ManyToOne 관계로 대체
 

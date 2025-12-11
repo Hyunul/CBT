@@ -2,20 +2,20 @@ version: "3.8"
 
 services:
   # 1. MySQL Database
-  db:
-    image: mysql:8.0
-    container_name: cbt-mysql
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_DATABASE: cbt_platform
-      MYSQL_USER: cbt_user
-      MYSQL_PASSWORD: cbt_password
-      MYSQL_ROOT_PASSWORD: root_password
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
-    restart: always
+#  db:
+#    image: mysql:8.0
+#    container_name: cbt-mysql
+#    ports:
+#      - "3306:3306"
+#    environment:
+#      MYSQL_DATABASE: cbt_platform
+#      MYSQL_USER: cbt_user
+#      MYSQL_PASSWORD: cbt_password
+#      MYSQL_ROOT_PASSWORD: root_password
+#    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+#    volumes:
+#      - mysql_data:/var/lib/mysql
+#    restart: always
 
   # 2. Redis Cache & Ranking Store
   redis:
@@ -55,48 +55,48 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
   # 3. Spring Boot Backend Application
-  backend:
-    build:
-      context: ./ # Spring Boot 프로젝트의 root 경로
-      dockerfile: Dockerfile
-    container_name: cbt-backend
-    ports:
-      - "8080:8080"
-    environment:
-      # DB 설정 (Host는 서비스 이름 'db'를 사용)
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: cbt_user
-      SPRING_DATASOURCE_PASSWORD: cbt_password
-      # Redis 설정 (Host는 서비스 이름 'redis'를 사용)
-      SPRING_REDIS_HOST: redis
-      # Elasticsearch 설정 (Host는 서비스 이름 'elasticsearch'를 사용)
-      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
-      # Kafka 설정 (Host는 서비스 이름 'kafka'를 사용)
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
-    depends_on:
-      - db
-      - redis
-      - elasticsearch # ELK 스택 추가
-      - kafka
-    restart: always
+#  backend:
+#    build:
+#      context: ./ # Spring Boot 프로젝트의 root 경로
+#      dockerfile: Dockerfile
+#    container_name: cbt-backend
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      # DB 설정 (Host는 서비스 이름 'db'를 사용)
+#      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+#      SPRING_DATASOURCE_USERNAME: cbt_user
+#      SPRING_DATASOURCE_PASSWORD: cbt_password
+#      # Redis 설정 (Host는 서비스 이름 'redis'를 사용)
+#      SPRING_REDIS_HOST: redis
+#      # Elasticsearch 설정 (Host는 서비스 이름 'elasticsearch'를 사용)
+#      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+#      # Kafka 설정 (Host는 서비스 이름 'kafka'를 사용)
+#      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+#    depends_on:
+#      - db
+#      - redis
+#      - elasticsearch # ELK 스택 추가
+#      - kafka
+#    restart: always
     # 개발 편의를 위해 소스 코드를 마운트하여 실시간 반영(Devtools 등)이 가능하게 할 수도 있습니다.
     # volumes:
     #   - ./backend:/app
 
   # 4. Next.js Frontend Application
-  frontend:
-    build:
-      context: ../cbt-fe # Next.js 프로젝트의 root 경로 (cbt-be 기준 상위 디렉토리의 cbt-fe)
-      dockerfile: Dockerfile
-    container_name: cbt-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      # 백엔드 API 서버 주소 설정 (프론트에서 백엔드로 요청 시 사용)
-      NEXT_PUBLIC_API_URL: http://localhost:8080
-    depends_on:
-      - backend
-    restart: always
+#  frontend:
+#    build:
+#      context: ../cbt-fe # Next.js 프로젝트의 root 경로 (cbt-be 기준 상위 디렉토리의 cbt-fe)
+#      dockerfile: Dockerfile
+#    container_name: cbt-frontend
+#    ports:
+#      - "3000:3000"
+#    environment:
+#      # 백엔드 API 서버 주소 설정 (프론트에서 백엔드로 요청 시 사용)
+#      NEXT_PUBLIC_API_URL: http://localhost:8080
+#    depends_on:
+#      - backend
+#    restart: always
 
   # 5. Elasticsearch (ELK Stack)
   elasticsearch:
