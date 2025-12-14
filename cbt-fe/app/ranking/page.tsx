@@ -1,9 +1,5 @@
 "use client";
 
-import { Crown, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-
 interface RankDto {
     rank: number;
     userId: number;
@@ -11,10 +7,9 @@ interface RankDto {
     score: number;
 }
 
-interface Exam {
-    id: number;
-    title: string;
-}
+import { Crown, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api, Page, Exam } from "@/lib/api";
 
 export default function RankingPage() {
     const [rankings, setRankings] = useState<RankDto[]>([]);
@@ -27,7 +22,7 @@ export default function RankingPage() {
      *  시험 목록 로딩 (Spring Pageable 대응)
      * ------------------------------- */
     useEffect(() => {
-        api("/api/exams/published")
+        api<{ data: Page<Exam> }>("/api/exams/published")
             .then((res) => {
                 const raw = res.data;
 
@@ -61,7 +56,7 @@ export default function RankingPage() {
             setRankingTitle(`"${examTitle || "선택된 시험"}" 점수 랭킹`);
         }
 
-        api(url)
+        api<RankDto[]>(url)
             .then((res) => {
                 // Backend's RankingController directly returns List<RankDto>, not ApiResponse<List<RankDto>>
                 // So 'res' itself is the List<RankDto> array.
@@ -167,7 +162,7 @@ export default function RankingPage() {
                                     </td>
 
                                     <td className="p-4 text-right font-mono text-xl text-gray-900 font-bold">
-                                        {user.score.toLocaleString()}
+                                        {(user.score ?? 0).toLocaleString()}
                                     </td>
                                 </tr>
                             ))}

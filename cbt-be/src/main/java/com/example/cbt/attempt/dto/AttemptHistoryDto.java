@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 import com.example.cbt.attempt.Attempt;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +14,10 @@ import lombok.Setter;
 public class AttemptHistoryDto {
     private Long attemptId;
     private String examTitle;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime submissionDate;
+
     private Integer finalScore;
     private String status; 
 
@@ -29,6 +33,6 @@ public class AttemptHistoryDto {
         
         // totalScore 필드를 DTO의 finalScore에 매핑
         this.finalScore = attempt.getTotalScore(); 
-        this.status = attempt.getStatus().name();
+        this.status = attempt.getSubmittedAt() != null ? "GRADED" : "IN_PROGRESS";
     }
 }

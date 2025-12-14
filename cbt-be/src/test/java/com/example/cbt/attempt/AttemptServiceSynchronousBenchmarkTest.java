@@ -5,6 +5,7 @@ import com.example.cbt.exam.ExamRepository;
 import com.example.cbt.grading.GradingService;
 import com.example.cbt.kafka.dto.ExamGradedEvent;
 import com.example.cbt.ranking.SubmissionRankingService;
+import com.example.cbt.user.Role;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -85,8 +87,8 @@ class AttemptServiceSynchronousBenchmarkTest {
         userRepository.deleteAll();
 
         // Create base test entities
-        testUser = userRepository.save(User.builder().username("testuser").password("password").build());
-        testExam = examRepository.save(Exam.builder().title("Test Exam").durationSec(600).build());
+        testUser = userRepository.save(User.builder().username("testuser_" + UUID.randomUUID()).password("password").role(Role.ROLE_USER).build());
+        testExam = examRepository.save(Exam.builder().title("Test Exam_" + UUID.randomUUID()).durationSec(600).build());
 
         // Stub grading service for all tests
         doAnswer(invocation -> new com.example.cbt.grading.GradingResult(50, 10, Collections.emptyList()))
@@ -100,7 +102,6 @@ class AttemptServiceSynchronousBenchmarkTest {
         Attempt testAttempt = attemptRepository.save(Attempt.builder()
                 .user(testUser)
                 .exam(testExam)
-                .status(AttemptStatus.IN_PROGRESS)
                 .startedAt(Instant.now())
                 .build());
 
@@ -146,7 +147,6 @@ class AttemptServiceSynchronousBenchmarkTest {
                     Attempt attempt = attemptRepository.save(Attempt.builder()
                             .user(testUser)
                             .exam(testExam)
-                            .status(AttemptStatus.IN_PROGRESS)
                             .startedAt(Instant.now())
                             .build());
                     attemptService.submitAndGrade(attempt.getId());

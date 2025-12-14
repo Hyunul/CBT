@@ -41,7 +41,7 @@ export default function QuestionCard({
     <div className="bg-card border rounded-lg p-6">
       <div className="mb-6">
         <p className="text-sm font-semibold text-primary mb-2">Question {qNumber}</p>
-        <h2 className="font-semibold text-xl text-card-foreground whitespace-pre-line leading-relaxed">{q.text}</h2>
+        <h2 className="font-semibold text-lg text-card-foreground whitespace-pre-line leading-relaxed">{q.text}</h2>
       </div>
 
       {q.type === "MCQ" ? (

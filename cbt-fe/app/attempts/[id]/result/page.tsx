@@ -74,9 +74,9 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
     const choicesArray: [string, string][] = useMemo(() => {
         if (item.type === "MCQ" && item.choices) {
             try {
-                return Object.entries(JSON.parse(item.choices)).sort(
-                    ([keyA], [keyB]) => keyA.localeCompare(keyB)
-                );
+                return Object.entries(
+                    JSON.parse(item.choices) as Record<string, string>
+                ).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
             } catch (e) {
                 console.error("Choices JSON parsing error:", e);
             }
@@ -94,25 +94,27 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
                     item.isCorrect ? "bg-primary/5" : "bg-destructive/5"
                 }`}
             >
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-2">
+                    <div className="flex justify-start">
+                        <div
+                            className={`flex items-center gap-2 font-bold text-sm px-3 py-1 rounded-full ${
+                                item.isCorrect
+                                    ? "bg-primary/10 text-primary"
+                                    : "bg-destructive/10 text-destructive"
+                            }`}
+                        >
+                            {item.isCorrect ? (
+                                <CheckCircle className="w-4 h-4" />
+                            ) : (
+                                <XCircle className="w-4 h-4" />
+                            )}
+                            {item.isCorrect ? "정답" : "오답"} (+
+                            {item.isCorrect ? item.score : 0}점)
+                        </div>
+                    </div>
                     <p className="text-lg font-semibold">
                         Q{index + 1}. {item.questionText}
                     </p>
-                    <div
-                        className={`flex items-center gap-2 font-bold text-sm px-3 py-1 rounded-full ${
-                            item.isCorrect
-                                ? "bg-primary/10 text-primary"
-                                : "bg-destructive/10 text-destructive"
-                        }`}
-                    >
-                        {item.isCorrect ? (
-                            <CheckCircle className="w-4 h-4" />
-                        ) : (
-                            <XCircle className="w-4 h-4" />
-                        )}
-                        {item.isCorrect ? "정답" : "오답"} (+
-                        {item.isCorrect ? item.score : 0}점)
-                    </div>
                 </div>
             </div>
             <div className="p-6 space-y-4">

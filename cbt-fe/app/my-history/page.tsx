@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, Page } from "@/lib/api";
 import { BookCheck, Calendar } from "lucide-react";
 import Pagination from "@/components/Pagination";
 import toast from "react-hot-toast";
@@ -11,16 +11,8 @@ interface AttemptHistory {
   attemptId: number;
   examTitle: string;
   submissionDate: string;
-  finalScore: number;
+  finalScore: number | null;
   status: string;
-}
-
-interface Page<T> {
-  content: T[];
-  totalPages: number;
-  number: number;
-  size: number;
-  totalElements: number;
 }
 
 export default function MyHistoryPage() {
@@ -30,9 +22,9 @@ export default function MyHistoryPage() {
 
   useEffect(() => {
     setLoading(true);
-    api<{ data: Page<AttemptHistory> }>(`/api/attempts/history?page=${page}`)
+    api<Page<AttemptHistory>>(`/api/attempts/history?page=${page}`)
       .then((res) => {
-        setHistoryPage(res.data);
+        setHistoryPage(res);
       })
       .catch((err) => {
         console.error("Failed to fetch attempt history:", err);
@@ -90,9 +82,17 @@ export default function MyHistoryPage() {
                   <h2 className="text-xl font-semibold text-gray-800 mb-2">
                     {attempt.examTitle}
                   </h2>
-                  <span className={`font-bold text-lg ${attempt.finalScore >= 60 ? 'text-blue-600' : 'text-red-500'}`}>
-                    {attempt.finalScore}점
-                  </span>
+                  {attempt.finalScore !== null ? (
+                    <span
+                      className={`font-bold text-lg ${
+                        attempt.finalScore >= 60 ? "text-blue-600" : "text-red-500"
+                      }`}
+                    >
+                      {attempt.finalScore}점
+                    </span>
+                  ) : (
+                    <span className="font-bold text-lg text-gray-400">-</span>
+                  )}
                 </div>
                 <div className="flex items-center text-sm text-gray-500 space-x-4 mb-4">
                   <div className="flex items-center gap-1.5">

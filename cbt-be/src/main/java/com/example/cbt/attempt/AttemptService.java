@@ -60,7 +60,6 @@ public class AttemptService {
         Attempt attempt = Attempt.builder()
                 .exam(exam) // Exam 객체 매핑
                 .user(user) // User 객체 매핑
-                .status(AttemptStatus.IN_PROGRESS)
                 .startedAt(Instant.now())
                 .build();
 
@@ -108,7 +107,7 @@ public class AttemptService {
         Attempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new RuntimeException("응시 기록이 없습니다."));
 
-        if (attempt.getStatus() == AttemptStatus.GRADED)
+        if (attempt.getSubmittedAt() != null)
             throw new RuntimeException("이미 채점 완료된 응시입니다.");
 
         GradingResult gradingResult = gradingService.gradeAttempt(attempt);
@@ -119,7 +118,6 @@ public class AttemptService {
 
         // Attempt 엔티티 업데이트
         attempt.setTotalScore(totalScore);
-        attempt.setStatus(AttemptStatus.GRADED);
         attempt.setSubmittedAt(Instant.now());
 
         answerRepository.saveAll(gradedAnswers);

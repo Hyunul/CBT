@@ -10,6 +10,7 @@ import com.example.cbt.kafka.dto.ExamGradedEvent;
 import com.example.cbt.question.Question;
 import com.example.cbt.question.QuestionRepository;
 import com.example.cbt.question.QuestionType;
+import com.example.cbt.user.Role;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -90,7 +91,6 @@ public class BenchmarkTest {
         // 1. Create Exam
         testExam = examRepository.save(Exam.builder()
                 .title("Benchmark Exam")
-                .description("Load Test")
                 .durationSec(3600)
                 .build());
 
@@ -115,6 +115,7 @@ public class BenchmarkTest {
                     .username("user" + i + "_" + UUID.randomUUID())
                     .email("user" + i + "@test.com")
                     .password("pass")
+                    .role(Role.ROLE_USER)
                     .build());
         }
         userRepository.saveAll(testUsers);

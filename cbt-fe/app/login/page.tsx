@@ -74,7 +74,6 @@ export default function LoginPage() {
                         계정에 로그인하여 시험을 시작하세요.
                     </p>
                 </div>
-                <button onClick={() => toast.success("토스트 정상 작동!")} className="btn-primary w-full">토스트 테스트</button>
                 <div className="grid gap-6">
                     <form onSubmit={handleLogin}>
                         <div className="grid gap-4">

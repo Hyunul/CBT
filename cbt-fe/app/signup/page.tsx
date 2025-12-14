@@ -6,8 +6,6 @@ import { UserPlus } from "lucide-react";
 import toast from "react-hot-toast";
 import Input from "@/components/Input";
 
-import Input from "@/components/Input";
-
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");

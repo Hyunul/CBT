@@ -75,6 +75,9 @@ public class AttemptController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 10, sort = "startedAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         Page<AttemptHistoryDto> history = attemptService.getAttemptHistory(userDetails.getUserId(), pageable);
         return ResponseEntity.ok(history);
     }

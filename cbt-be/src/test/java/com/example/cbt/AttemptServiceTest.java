@@ -31,7 +31,6 @@ import com.example.cbt.attempt.AnswerRepository;
 import com.example.cbt.attempt.Attempt;
 import com.example.cbt.attempt.AttemptRepository;
 import com.example.cbt.attempt.AttemptService;
-import com.example.cbt.attempt.AttemptStatus;
 import com.example.cbt.attempt.dto.AttemptHistoryDto;
 import com.example.cbt.attempt.dto.AttemptSubmitRes;
 import com.example.cbt.exam.Exam;

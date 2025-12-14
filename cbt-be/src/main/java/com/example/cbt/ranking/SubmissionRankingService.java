@@ -4,6 +4,7 @@ import com.example.cbt.ranking.dto.RankDto;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // Import Slf4j
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j // Add Slf4j annotation
 public class SubmissionRankingService {
 
     private static final String RANKING_KEY_EXAM_PREFIX = "ranking:exam:";
@@ -29,8 +31,8 @@ public class SubmissionRankingService {
      */
     public void updateExamRanking(Long examId, Long userId, double score) {
         String key = RANKING_KEY_EXAM_PREFIX + examId;
-        // userId는 String으로 변환되어 저장됨
         rankingRepository.updateScore(key, userId, score);
+        log.info("Redis: Updated exam ranking for key={}, userId={}, score={}", key, userId, score);
     }
 
     /**
@@ -38,7 +40,9 @@ public class SubmissionRankingService {
      * 전체 응시 횟수 랭킹을 1 증가시킵니다. (횟수 기반 랭킹)
      */
     public void increaseSubmission(Long userId) {
-        rankingRepository.incrementScore(RANKING_KEY_SUBMISSIONS, userId, 1);
+        String key = RANKING_KEY_SUBMISSIONS;
+        rankingRepository.incrementScore(key, userId, 1);
+        log.info("Redis: Increased global submission ranking for userId={}", userId);
     }
 
     /**
@@ -91,7 +95,7 @@ public class SubmissionRankingService {
                             rank.getAndIncrement(),
                             userId,
                             user != null ? user.getUsername() : "(탈퇴 사용자)",
-                            tuple.getScore()
+                            tuple.getScore() != null ? tuple.getScore() : 0.0
                     );
                 })
                 .collect(Collectors.toList());

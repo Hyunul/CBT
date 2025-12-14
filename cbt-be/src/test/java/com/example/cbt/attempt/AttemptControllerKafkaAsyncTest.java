@@ -4,6 +4,7 @@ import com.example.cbt.exam.Exam;
 import com.example.cbt.exam.ExamRepository;
 import com.example.cbt.kafka.dto.ExamGradedEvent;
 import com.example.cbt.ranking.SubmissionRankingService;
+import com.example.cbt.user.Role;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,12 +72,11 @@ class AttemptControllerKafkaAsyncTest {
         userRepository.deleteAll();
 
         // Create test entities
-        testUser = userRepository.save(User.builder().username("testuser").password("password").build());
-        testExam = examRepository.save(Exam.builder().title("Test Exam").durationSec(600).build());
+        testUser = userRepository.save(User.builder().username("testuser_" + UUID.randomUUID()).password("password").role(Role.ROLE_USER).build());
+        testExam = examRepository.save(Exam.builder().title("Test Exam_" + UUID.randomUUID()).durationSec(600).build());
         testAttempt = attemptRepository.save(Attempt.builder()
                 .user(testUser)
                 .exam(testExam)
-                .status(AttemptStatus.IN_PROGRESS)
                 .startedAt(Instant.now())
                 .build());
     }

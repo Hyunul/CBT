@@ -24,7 +24,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trust.packages: "*" # Trust all packages for deserialization
+        spring.json.trust.packages: "com.example.cbt.kafka.dto" # Explicitly trust the package for deserialization
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

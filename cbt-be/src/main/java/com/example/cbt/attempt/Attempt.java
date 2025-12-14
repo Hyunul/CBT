@@ -31,9 +31,6 @@ public class Attempt {
     @JoinColumn(name = "user_id", nullable = true)
     private User user; // <--- User 객체 참조
 
-    @Enumerated(EnumType.STRING)
-    private AttemptStatus status; // IN_PROGRESS, SUBMITTED, GRADED
-
     @CreationTimestamp
     private Instant startedAt;
 

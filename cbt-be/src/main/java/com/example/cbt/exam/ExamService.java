@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.cbt.attempt.AnswerRepository;
 import com.example.cbt.attempt.Attempt;
 import com.example.cbt.attempt.AttemptRepository;
-import com.example.cbt.attempt.AttemptStatus;
 import com.example.cbt.question.Question;
 import com.example.cbt.question.QuestionRepository;
 
@@ -126,7 +125,7 @@ public class ExamService {
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + id));
 
         // IN_PROGRESS 상태의 Attempt만 삭제
-        List<Attempt> inProgressAttempts = attemptRepository.findByExamIdAndStatus(id, AttemptStatus.IN_PROGRESS);
+        List<Attempt> inProgressAttempts = attemptRepository.findByExamIdAndSubmittedAtIsNull(id);
 
         // 관련 Answer 삭제
         for (Attempt attempt : inProgressAttempts) {
