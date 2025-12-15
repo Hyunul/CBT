@@ -30,7 +30,7 @@ public class RankingConsumer {
             );
             log.info("Successfully updated ranking for user: {}", event.getUserId());
         } catch (Exception e) {
-            log.error("Error processing ExamGradedEvent for user {}: {}", event.getUserId(), e.getMessage());
+            log.error("Error processing ExamGradedEvent for user " + event.getUserId(), e);
             // Optionally, send to a Dead Letter Topic (DLT) here
         }
     }

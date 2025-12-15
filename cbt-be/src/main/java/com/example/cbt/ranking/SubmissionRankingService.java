@@ -80,6 +80,10 @@ public class SubmissionRankingService {
 
         // DB에서 사용자 이름 조회 (N+1 방지를 위해 in 쿼리 사용)
         List<User> users = userRepository.findAllById(userIds);
+        
+        // List -> Map으로 변환하여 조회 성능 향상 (O(N*M) -> O(N))
+        java.util.Map<Long, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
 
         AtomicInteger rank = new AtomicInteger(1);
 
@@ -87,9 +91,7 @@ public class SubmissionRankingService {
         return rankSet.stream()
                 .map(tuple -> {
                     Long userId = Long.valueOf(tuple.getValue());
-                    User user = users.stream()
-                            .filter(u -> u.getId().equals(userId))
-                            .findFirst().orElse(null);
+                    User user = userMap.get(userId);
 
                     return new RankDto(
                             rank.getAndIncrement(),

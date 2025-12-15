@@ -48,9 +48,7 @@ public class SecurityConfig {
                     ).permitAll()
                     // Explicitly secure the history endpoint BEFORE the wildcard permitAll
                     .requestMatchers("/api/attempts/history").authenticated()
-                    // Allow guest exam flow (starting, taking, submitting, viewing result)
-                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/attempts/start/{examId}").permitAll()
-                    .requestMatchers("/api/attempts/{attemptId}/**").permitAll()
+                    
                     // Allow viewing exams to everyone (this is safe because admin rules for exams are already defined above)
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams", "/api/exams/**", "/api/ranking/**").permitAll()
 

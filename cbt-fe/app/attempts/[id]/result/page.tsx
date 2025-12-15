@@ -112,9 +112,12 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
                             {item.isCorrect ? item.score : 0}점)
                         </div>
                     </div>
-                    <p className="text-lg font-semibold">
-                        Q{index + 1}. {item.questionText}
-                    </p>
+                    <div className="mt-2">
+                        <span className="text-lg font-bold text-gray-800 mb-2 block">Q{index + 1}</span>
+                        <div className="bg-slate-900 text-slate-50 p-5 rounded-lg font-mono text-base whitespace-pre-wrap border border-slate-800 shadow-sm leading-relaxed">
+                            {item.questionText}
+                        </div>
+                    </div>
                 </div>
             </div>
             <div className="p-6 space-y-4">

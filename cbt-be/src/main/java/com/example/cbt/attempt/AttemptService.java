@@ -70,9 +70,11 @@ public class AttemptService {
      * 2) Attempt 상세 조회 (Question 포함)
      */
     @Transactional(readOnly = true)
-    public AttemptDetailRes getAttemptDetail(Long attemptId) {
+    public AttemptDetailRes getAttemptDetail(Long attemptId, Long userId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("Attempt not found"));
+        
+        validateOwner(attempt, userId);
         
         Exam exam = attempt.getExam();
         
@@ -103,9 +105,11 @@ public class AttemptService {
      * 3) Attempt 제출 + 자동 채점 + Redis 랭킹 반영
      */
     @Transactional
-    public AttemptSubmitRes submitAndGrade(Long attemptId) {
+    public AttemptSubmitRes submitAndGrade(Long attemptId, Long userId) {
         Attempt attempt = attemptRepository.findById(attemptId)
             .orElseThrow(() -> new RuntimeException("응시 기록이 없습니다."));
+
+        validateOwner(attempt, userId);
 
         if (attempt.getSubmittedAt() != null)
             throw new RuntimeException("이미 채점 완료된 응시입니다.");
@@ -157,9 +161,11 @@ public class AttemptService {
      * 5) 오답 리뷰 (문항별 상세)
      */
     @Transactional(readOnly = true)
-    public List<AttemptReviewRes> getReview(Long attemptId) {
+    public List<AttemptReviewRes> getReview(Long attemptId, Long userId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("응시 내역 없음"));
+        
+        validateOwner(attempt, userId);
 
         List<Question> questions = questionRepository.findByExamId(attempt.getExam().getId()); 
         List<Answer> answers = answerRepository.findByAttemptId(attemptId);
@@ -192,10 +198,12 @@ public class AttemptService {
      * 6) 답안 저장
      */
     @Transactional
-    public void saveAnswers(Long attemptId, List<com.example.cbt.attempt.dto.AnswerReq> reqList) {
+    public void saveAnswers(Long attemptId, List<com.example.cbt.attempt.dto.AnswerReq> reqList, Long userId) {
         // 1. Attempt 객체를 먼저 조회 (필수)
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new RuntimeException("Attempt not found with id: " + attemptId));
+
+        validateOwner(attempt, userId);
 
         // Pre-fetch questions map to avoid N+1 and set Question entity
         java.util.Map<Long, Question> questionMap = questionRepository.findByExamId(attempt.getExam().getId())
@@ -224,6 +232,12 @@ public class AttemptService {
 
             // 5. 저장 (JPA Persist/Merge)
             answerRepository.save(answer);
+        }
+    }
+
+    private void validateOwner(Attempt attempt, Long userId) {
+        if (attempt.getUser() == null || !attempt.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Not authorized to access this attempt");
         }
     }
 

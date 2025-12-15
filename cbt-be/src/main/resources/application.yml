@@ -22,12 +22,18 @@ spring:
       group-id: cbt-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
-        spring.json.trust.packages: "com.example.cbt.kafka.dto" # Explicitly trust the package for deserialization
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trust.packages: "*"
+        spring.json.value.default.type: "com.example.cbt.kafka.dto.ExamGradedEvent"
+        spring.json.use.type.headers: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+jwt:
+  secret: ${JWT_SECRET:mysecretkey123456789012345678901234}
+  expiration: 43200000
 logging:
   level:
     org.hibernate.SQL: debug

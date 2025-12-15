@@ -49,23 +49,28 @@ public class AttemptController {
     @PostMapping("/{attemptId}/answers")
     public ResponseEntity<Void> saveAnswers(
             @PathVariable Long attemptId,
-            @RequestBody List<AnswerReq> reqList) {
+            @RequestBody List<AnswerReq> reqList,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        attemptService.saveAnswers(attemptId, reqList);
+        attemptService.saveAnswers(attemptId, reqList, userDetails.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
     
     // --- 2. Attempt 상세 조회 (시험 진행 화면 로딩) ---
     @GetMapping("/{attemptId}")
-    public ResponseEntity<AttemptDetailRes> getAttemptDetail(@PathVariable Long attemptId) {
-        AttemptDetailRes detail = attemptService.getAttemptDetail(attemptId);
+    public ResponseEntity<AttemptDetailRes> getAttemptDetail(
+            @PathVariable Long attemptId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        AttemptDetailRes detail = attemptService.getAttemptDetail(attemptId, userDetails.getUserId());
         return ResponseEntity.ok(detail);
     }
 
     // --- 3. Attempt 제출 및 채점 ---
     @PostMapping("/{attemptId}/submit")
-    public ResponseEntity<AttemptSubmitRes> submitAttempt(@PathVariable Long attemptId) {
-        AttemptSubmitRes result = attemptService.submitAndGrade(attemptId);
+    public ResponseEntity<AttemptSubmitRes> submitAttempt(
+            @PathVariable Long attemptId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        AttemptSubmitRes result = attemptService.submitAndGrade(attemptId, userDetails.getUserId());
         return ResponseEntity.ok(result);
     }
 
@@ -84,8 +89,10 @@ public class AttemptController {
 
     // --- 5. 시험 결과/오답 리뷰 ---
     @GetMapping("/{attemptId}/result")
-    public ResponseEntity<List<AttemptReviewRes>> getAttemptReview(@PathVariable Long attemptId) {
-        List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId);
+    public ResponseEntity<List<AttemptReviewRes>> getAttemptReview(
+            @PathVariable Long attemptId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId, userDetails.getUserId());
         return ResponseEntity.ok(reviewList);
     }
 
