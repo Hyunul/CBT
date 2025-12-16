@@ -21,6 +21,7 @@ import com.example.cbt.kafka.dto.ExamGradedEvent;
 import com.example.cbt.question.Question; // Question 엔티티 임포트 가정
 import com.example.cbt.question.QuestionRepository; // QuestionRepository 임포트 가정
 import com.example.cbt.question.QuestionType; // QuestionType 임포트 가정
+import com.example.cbt.statistics.StatisticsService;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 
@@ -40,6 +41,7 @@ public class AttemptService {
     private final UserRepository userRepository;
     private final GradingService gradingService;
     private final KafkaTemplate<String, ExamGradedEvent> kafkaTemplate;
+    private final StatisticsService statisticsService;
 
     public static final String TOPIC_EXAM_GRADED = "exam-graded";
 
@@ -126,6 +128,9 @@ public class AttemptService {
 
         answerRepository.saveAll(gradedAnswers);
         attemptRepository.save(attempt);
+
+        // ES Indexing
+        statisticsService.indexAttempt(attempt);
 
         // If the user is not a guest, publish an event to Kafka for ranking update.
         if (attempt.getUser() != null) {

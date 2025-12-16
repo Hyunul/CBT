@@ -16,6 +16,8 @@ spring:
       host: localhost
       port: 6379
       timeout: 60000
+    elasticsearch:
+      uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
