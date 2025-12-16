@@ -202,7 +202,7 @@ public class BenchmarkTest {
         AtomicInteger counter = new AtomicInteger(0);
         
         // Pre-create attempts to just measure submission time
-        List<Long> attemptIds = testUsers.stream().map(u -> {
+        List<Attempt> attempts = testUsers.stream().map(u -> {
             Attempt att = attemptService.startAttempt(testExam.getId(), u.getId());
             // Pre-save some answers
             List<Answer> answers = testQuestions.stream().map(q -> Answer.builder()
@@ -211,7 +211,7 @@ public class BenchmarkTest {
                 .selectedChoices("A") // Correct answer
                 .build()).collect(Collectors.toList());
             answerRepository.saveAll(answers);
-            return att.getId();
+            return att;
         }).toList();
 
         // If we want to skip Kafka for Case 1, we need to mock it to do nothing or throw exception if called?
@@ -221,12 +221,12 @@ public class BenchmarkTest {
              when(kafkaTemplate.send(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
         }
 
-        for (Long attemptId : attemptIds) {
+        for (Attempt attempt : attempts) {
             CompletableFuture<Long> future = CompletableFuture.supplyAsync(() -> {
                 long start = System.currentTimeMillis();
                 try {
                     // This method includes Grading (Sync) + DB Save + Kafka Send (Mocked)
-                    attemptService.submitAndGrade(attemptId);
+                    attemptService.submitAndGrade(attempt.getId(), attempt.getUser().getId());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

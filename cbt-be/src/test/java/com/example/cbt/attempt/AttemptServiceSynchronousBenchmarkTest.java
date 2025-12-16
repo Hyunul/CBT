@@ -117,7 +117,7 @@ class AttemptServiceSynchronousBenchmarkTest {
 
         // When: Call submitAndGrade directly and measure time
         long startTime = System.currentTimeMillis();
-        attemptService.submitAndGrade(testAttempt.getId());
+        attemptService.submitAndGrade(testAttempt.getId(), testUser.getId());
         long duration = System.currentTimeMillis() - startTime;
 
         // Then: Assert that the operation takes significant time
@@ -149,7 +149,7 @@ class AttemptServiceSynchronousBenchmarkTest {
                             .exam(testExam)
                             .startedAt(Instant.now())
                             .build());
-                    attemptService.submitAndGrade(attempt.getId());
+                    attemptService.submitAndGrade(attempt.getId(), testUser.getId());
                 } finally {
                     latch.countDown();
                 }
