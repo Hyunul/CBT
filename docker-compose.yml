@@ -63,6 +63,8 @@ services:
       # EC2의 공인 IP나 도메인이 있다면 그것으로 변경해야 합니다.
       # 예: http://<EC2-PUBLIC-IP>:8080
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      # Docker 내부 네트워크 통신용 (Next.js Rewrite)
+      INTERNAL_API_URL: http://backend:8080
     depends_on:
       - backend
     restart: always
