@@ -1,115 +1,137 @@
-name: Deploy to EC2 with Docker
+version: "3.8"
 
-on:
-  push:
-    branches: ["main"]
+services:
+  # 1. MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: cbt-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: cbt_platform
+      MYSQL_USER: cbt_user
+      MYSQL_PASSWORD: cbt_password
+      MYSQL_ROOT_PASSWORD: root_password
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  # 2. Redis Cache & Ranking Store
+  redis:
+    image: redis:7-alpine
+    container_name: cbt-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: always
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+  # Zookeeper for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    restart: always
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_INTERNAL://kafka:19092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  # 3. Spring Boot Backend Application
+  backend:
+    image: ${DOCKER_USERNAME}/cbt-backend:latest
+    container_name: cbt-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # DB 설정
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: cbt_user
+      SPRING_DATASOURCE_PASSWORD: cbt_password
+      # Redis 설정
+      SPRING_REDIS_HOST: redis
+      # Elasticsearch 설정
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+      # Kafka 설정
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: always
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+  # 4. Next.js Frontend Application
+  frontend:
+    image: ${DOCKER_USERNAME}/cbt-frontend:latest
+    container_name: cbt-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # 중요: 브라우저(클라이언트)에서 접근할 API 주소입니다.
+      # EC2의 공인 IP나 도메인이 있다면 그것으로 변경해야 합니다.
+      # 예: http://<EC2-PUBLIC-IP>:8080
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    depends_on:
+      - backend
+    restart: always
 
-      - name: Build and push Backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./cbt-be
-          file: ./cbt-be/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/cbt-backend:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-backend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-backend:buildcache,mode=max
+  # 5. Elasticsearch (ELK Stack)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: cbt-elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: always
 
-      - name: Build and push Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./cbt-fe
-          file: ./cbt-fe/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/cbt-frontend:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache,mode=max
+  # 6. Kibana (ELK Stack Visualization)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: cbt-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    restart: always
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Start SSH agent and add key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-
-      - name: Ensure target directory exists on EC2
-        run: |
-          set -euo pipefail
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} \
-            "mkdir -p /home/${{ secrets.EC2_USERNAME }}/CBT"
-
-      - name: Copy docker-compose.yml to EC2 (overwrite)
-        run: |
-          set -euo pipefail
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            docker-compose.yml \
-            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USERNAME }}/CBT/docker-compose.yml
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -euo pipefail
-
-            cd /home/${{ secrets.EC2_USERNAME }}/CBT
-
-            # Compose v2 플러그인 보장(없으면 설치)
-            if ! sudo docker compose version >/dev/null 2>&1; then
-              echo "docker compose not found. Installing docker-compose-plugin..."
-              sudo apt-get update -y
-              sudo apt-get install -y docker-compose-plugin
-            fi
-
-            touch .env
-
-            upsert_env () {
-              local key="$1"
-              local val="$2"
-              if grep -q "^${key}=" .env; then
-                sed -i "s|^${key}=.*|${key}=${val}|" .env
-              else
-                echo "${key}=${val}" >> .env
-              fi
-            }
-
-            upsert_env "DOCKER_USERNAME" "${{ secrets.DOCKER_USERNAME }}"
-
-            echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-            sudo docker compose pull
-            sudo docker compose up -d --remove-orphans
-            sudo docker image prune -f
+volumes:
+  mysql_data:
+  redis_data:
+  elasticsearch_data:

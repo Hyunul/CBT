@@ -88,7 +88,11 @@ jobs:
 
             cd /home/${{ secrets.EC2_USERNAME }}/CBT
 
-            COMPOSE="docker compose"
+            if sudo docker compose version >/dev/null 2>&1; then
+              COMPOSE="docker compose"
+            else
+              COMPOSE="docker-compose"
+            fi
 
             touch .env
 
