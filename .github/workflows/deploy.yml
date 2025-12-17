@@ -88,11 +88,13 @@ jobs:
 
             cd /home/${{ secrets.EC2_USERNAME }}/CBT
 
-            if docker compose version >/dev/null 2>&1; then
+            # Docker Compose 감지 (v2 vs v1)
+            if sudo docker compose version >/dev/null 2>&1; then
               COMPOSE="docker compose"
             else
               COMPOSE="docker-compose"
             fi
+            echo "Selected Compose command: sudo $COMPOSE"
 
             touch .env
 
