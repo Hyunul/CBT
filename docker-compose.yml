@@ -77,25 +77,28 @@ jobs:
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USERNAME }}/CBT/docker-compose.yml
 
       - name: Deploy to EC2
-        run: |
-          set -euo pipefail
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
             set -euo pipefail
 
             cd /home/${{ secrets.EC2_USERNAME }}/CBT
 
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE="docker compose"
-            else
-              COMPOSE="docker-compose"
+            # Compose v2 플러그인 보장(없으면 설치)
+            if ! sudo docker compose version >/dev/null 2>&1; then
+              echo "docker compose not found. Installing docker-compose-plugin..."
+              sudo apt-get update -y
+              sudo apt-get install -y docker-compose-plugin
             fi
 
             touch .env
 
             upsert_env () {
-              key="$1"
-              val="$2"
+              local key="$1"
+              local val="$2"
               if grep -q "^${key}=" .env; then
                 sed -i "s|^${key}=.*|${key}=${val}|" .env
               else
@@ -107,8 +110,6 @@ jobs:
 
             echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            sudo $COMPOSE pull
-            sudo $COMPOSE up -d --remove-orphans
-
+            sudo docker compose pull
+            sudo docker compose up -d --remove-orphans
             sudo docker image prune -f
-          EOF
