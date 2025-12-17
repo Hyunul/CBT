@@ -2,31 +2,32 @@
 FROM eclipse-temurin:17-jdk-alpine AS builder
 WORKDIR /app
 
-# 1) Gradle wrapper/설정 먼저 복사 (캐시 효율)
 COPY gradlew ./
 COPY gradle ./gradle
 COPY build.gradle* settings.gradle* ./
 
+# 소스 복사 전에 권한 부여(캐시용) + 이후 덮어쓰기 대비해서 다시 한번 부여할 예정
 RUN chmod +x ./gradlew
 
-# (선택) 의존성 미리 받아서 캐시 레이어 만들기
-# 소스 없이도 가능한 범위에서만 실행
+# (선택) 캐시 레이어
 RUN ./gradlew dependencies --no-daemon || true
 
-# 2) 소스 복사 후 빌드
+# 전체 소스 복사 (여기서 gradlew가 다시 덮일 수 있음)
 COPY . .
+
+# 덮어쓴 gradlew에 다시 실행 권한 부여 (핵심)
+RUN chmod +x ./gradlew
+
 RUN ./gradlew bootJar --no-daemon
 
 # Stage 2: Run
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# non-root 유저 생성
 RUN addgroup -S app && adduser -S app -G app
 USER app
 
-# bootJar 결과물만 복사 (가급적 jar 이름 고정 권장)
-COPY --from=builder /app/build/libs/*SNAPSHOT*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
