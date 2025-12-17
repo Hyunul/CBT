@@ -5,7 +5,13 @@ import com.example.cbt.statistics.document.AttemptDocument;
 import com.example.cbt.statistics.repository.AttemptSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsAggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.StatsAggregate;
+
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregation;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -13,8 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,43 +46,66 @@ public class StatisticsService {
         }
     }
 
-    // Returns average score per exam
     public List<ExamStatsDto> getExamStats() {
-        // Aggregation: Terms(examTitle) -> Stats(totalScore)
-        
         NativeQuery query = NativeQuery.builder()
-                .withAggregation("exams", org.springframework.data.elasticsearch.client.elc.Aggregation.of(a -> a
-                        .terms(t -> t.field("examTitle.keyword").size(10)) 
-                        .aggregations("score_stats", sub -> sub.stats(s -> s.field("totalScore")))
-                ))
+                .withAggregation("exams",
+                        co.elastic.clients.elasticsearch._types.aggregations.Aggregation.of(a -> a
+                                .terms(t -> t.field("examTitle.keyword").size(10))
+                                .aggregations("score_stats", sub -> sub.stats(s -> s.field("totalScore")))
+                        )
+                )
                 .build();
 
         SearchHits<AttemptDocument> searchHits = elasticsearchTemplate.search(query, AttemptDocument.class);
-        
+
         List<ExamStatsDto> result = new ArrayList<>();
-        
-        if (searchHits.getAggregations() != null) {
-            var examsAgg = searchHits.getAggregations().get("exams");
-            
-            if (examsAgg != null) {
-                ((co.elastic.clients.elasticsearch._types.aggregations.StringTermsAggregate) examsAgg.aggregation().getAggregate()._get())
-                        .buckets().array().forEach(bucket -> {
-                            String examTitle = bucket.key().stringValue();
-                            var stats = bucket.aggregations().get("score_stats").stats();
-                            
-                            result.add(new ExamStatsDto(
-                                examTitle, 
-                                stats.avg(), 
-                                stats.count(), 
-                                stats.min(), 
-                                stats.max()
-                            ));
-                        });
-            }
+
+        var aggsContainer = searchHits.getAggregations();
+        if (!(aggsContainer instanceof ElasticsearchAggregations aggs)) {
+            return result;
         }
+
+        ElasticsearchAggregation examsAggContainer = aggs.get("exams");
+        if (examsAggContainer == null) {
+            return result;
+        }
+
+        org.springframework.data.elasticsearch.client.elc.Aggregation springAgg = examsAggContainer.aggregation();
+        if (springAgg == null) {
+            return result;
+        }
+
+        Aggregate aggregate = springAgg.getAggregate();
+        if (aggregate == null || !aggregate.isSterms()) {
+            return result;
+        }
+
+        StringTermsAggregate termsAgg = aggregate.sterms();
+        if (termsAgg.buckets() == null || termsAgg.buckets().array() == null) {
+            return result;
+        }
+
+        termsAgg.buckets().array().forEach(bucket -> {
+            String examTitle = bucket.key() != null ? bucket.key().stringValue() : null;
+            if (examTitle == null) return;
+
+            Aggregate scoreStatsAgg = bucket.aggregations() != null ? bucket.aggregations().get("score_stats") : null;
+            if (scoreStatsAgg != null && scoreStatsAgg.isStats()) {
+                StatsAggregate stats = scoreStatsAgg.stats();
+                long count = stats.count();
+
+                result.add(new ExamStatsDto(
+                        examTitle,
+                        stats.avg(),
+                        count,
+                        count > 0 ? stats.min() : 0.0,
+                        count > 0 ? stats.max() : 0.0
+                ));
+            }
+        });
 
         return result;
     }
-    
+
     public record ExamStatsDto(String examTitle, double avgScore, long count, double minScore, double maxScore) {}
 }
