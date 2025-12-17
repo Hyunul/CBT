@@ -44,6 +44,8 @@ jobs:
           file: ./cbt-fe/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/cbt-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_HOST }}:8080
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache,mode=max
 
