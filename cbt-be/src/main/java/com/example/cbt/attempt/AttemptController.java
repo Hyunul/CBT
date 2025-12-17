@@ -46,13 +46,17 @@ public class AttemptController {
         return ResponseEntity.ok(attempt.getId());
     }
 
+    private Long getUserId(CustomUserDetails userDetails) {
+        return userDetails != null ? userDetails.getUserId() : null;
+    }
+
     @PostMapping("/{attemptId}/answers")
     public ResponseEntity<Void> saveAnswers(
             @PathVariable Long attemptId,
             @RequestBody List<AnswerReq> reqList,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        attemptService.saveAnswers(attemptId, reqList, userDetails.getUserId());
+        attemptService.saveAnswers(attemptId, reqList, getUserId(userDetails));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
     
@@ -61,7 +65,7 @@ public class AttemptController {
     public ResponseEntity<AttemptDetailRes> getAttemptDetail(
             @PathVariable Long attemptId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AttemptDetailRes detail = attemptService.getAttemptDetail(attemptId, userDetails.getUserId());
+        AttemptDetailRes detail = attemptService.getAttemptDetail(attemptId, getUserId(userDetails));
         return ResponseEntity.ok(detail);
     }
 
@@ -70,7 +74,7 @@ public class AttemptController {
     public ResponseEntity<AttemptSubmitRes> submitAttempt(
             @PathVariable Long attemptId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AttemptSubmitRes result = attemptService.submitAndGrade(attemptId, userDetails.getUserId());
+        AttemptSubmitRes result = attemptService.submitAndGrade(attemptId, getUserId(userDetails));
         return ResponseEntity.ok(result);
     }
 
@@ -92,7 +96,7 @@ public class AttemptController {
     public ResponseEntity<List<AttemptReviewRes>> getAttemptReview(
             @PathVariable Long attemptId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId, userDetails.getUserId());
+        List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId, getUserId(userDetails));
         return ResponseEntity.ok(reviewList);
     }
 

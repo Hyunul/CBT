@@ -229,7 +229,12 @@ public class AttemptService {
     }
 
     private void validateOwner(Attempt attempt, Long userId) {
-        if (attempt.getUser() == null || !attempt.getUser().getId().equals(userId)) {
+        // Guest attempts (no user associated) are accessible to anyone with the ID
+        if (attempt.getUser() == null) {
+            return;
+        }
+        // Authenticated attempts require the correct user ID
+        if (userId == null || !attempt.getUser().getId().equals(userId)) {
             throw new RuntimeException("Not authorized to access this attempt");
         }
     }
