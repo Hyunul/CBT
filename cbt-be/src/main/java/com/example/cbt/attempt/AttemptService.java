@@ -17,17 +17,15 @@ import com.example.cbt.exam.Exam;
 import com.example.cbt.exam.ExamRepository;
 import com.example.cbt.grading.GradingResult;
 import com.example.cbt.grading.GradingService;
-import com.example.cbt.kafka.dto.ExamGradedEvent;
+import com.example.cbt.ranking.SubmissionRankingService;
 import com.example.cbt.question.Question; // Question 엔티티 임포트 가정
 import com.example.cbt.question.QuestionRepository; // QuestionRepository 임포트 가정
 import com.example.cbt.question.QuestionType; // QuestionType 임포트 가정
-import com.example.cbt.statistics.StatisticsService;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -40,10 +38,7 @@ public class AttemptService {
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
     private final GradingService gradingService;
-    private final KafkaTemplate<String, ExamGradedEvent> kafkaTemplate;
-    private final StatisticsService statisticsService;
-
-    public static final String TOPIC_EXAM_GRADED = "exam-graded";
+    private final SubmissionRankingService submissionRankingService;
 
     /**
      * 1) Attempt 생성 (시험 시작)
@@ -129,18 +124,11 @@ public class AttemptService {
         answerRepository.saveAll(gradedAnswers);
         attemptRepository.save(attempt);
 
-        // ES Indexing
-        statisticsService.indexAttempt(attempt);
-
-        // If the user is not a guest, publish an event to Kafka for ranking update.
+        // If the user is not a guest, update ranking directly (Synchronous)
         if (attempt.getUser() != null) {
-            ExamGradedEvent event = new ExamGradedEvent(
-                attempt.getUser().getId(),
-                attempt.getExam().getId(),
-                totalScore
-            );
-            kafkaTemplate.send(TOPIC_EXAM_GRADED, event);
-            log.info("Published ExamGradedEvent to Kafka: {}", event);
+            submissionRankingService.updateExamRanking(attempt.getExam().getId(), attempt.getUser().getId(), (double) totalScore);
+            submissionRankingService.increaseSubmission(attempt.getUser().getId());
+            log.info("Updated ranking synchronously for user {}", attempt.getUser().getId());
         }
 
         return new AttemptSubmitRes(

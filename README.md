@@ -8,12 +8,8 @@ A modern, full-stack Computer Based Testing platform designed for creating, taki
 *   **Exam System:**
     *   **Admin:** Create, update, and delete exams and question series.
     *   **User:** Take exams within a timed interface with auto-submission.
-*   **Auto-Grading:** High-performance asynchronous grading system powered by **Apache Kafka**.
+*   **Auto-Grading:** Instant synchronous grading and feedback.
 *   **Rankings:** Real-time leaderboards and score history leveraging **Redis** for speed.
-*   **Analytics & Observability:**
-    *   **ELK Stack:** Integrated Elasticsearch, Logstash, and Kibana for log management and advanced statistics.
-    *   **Visualizations:** Interactive charts for user performance and exam statistics.
-*   **Search:** Full-text search capabilities for exams and questions via Elasticsearch.
 
 ## 🛠 Tech Stack
 
@@ -23,8 +19,6 @@ A modern, full-stack Computer Based Testing platform designed for creating, taki
 *   **Database:** 
     *   **MySQL 8.0** (Primary Relational Data)
     *   **Redis** (Caching, Session, Real-time Rankings)
-    *   **Elasticsearch** (Search, Analytics, Logs)
-*   **Messaging:** Apache Kafka (Async Grading, Event Driven Architecture)
 *   **Security:** Spring Security + JWT
 *   **Docs:** Swagger / OpenAPI
 
@@ -37,7 +31,7 @@ A modern, full-stack Computer Based Testing platform designed for creating, taki
 *   **Visualization:** Chart.js, React-Chartjs-2
 
 ### Infrastructure
-*   **Docker Compose:** Orchestrates the entire stack including Database, Broker, Cache, Backend, and Frontend.
+*   **Docker Compose:** Orchestrates the entire stack including Database, Cache, Backend, and Frontend.
 
 ## 📂 Project Structure
 
@@ -48,9 +42,7 @@ CBT/
 │   │   ├── attempt/        # Attempt & Grading logic
 │   │   ├── auth/           # Authentication & JWT
 │   │   ├── exam/           # Exam & Question management
-│   │   ├── kafka/          # Kafka Producers/Consumers
-│   │   ├── ranking/        # Redis-based Ranking service
-│   │   └── statistics/     # ELK-based Statistics
+│   │   └── ranking/        # Redis-based Ranking service
 │   └── build.gradle        # Backend dependencies
 │
 ├── cbt-fe/                 # Next.js Frontend
@@ -72,16 +64,15 @@ docker-compose up -d --build
 ```
 *   **Frontend:** http://localhost:3000
 *   **Backend:** http://localhost:8080
-*   **Kibana:** http://localhost:5601
 
 ### Option 2: Local Development
 Run the infrastructure in Docker, but run the backend and frontend code on your host machine for development.
 
 #### 1. Start Infrastructure
-Start only the required services (MySQL, Redis, Kafka, Elasticsearch, etc.).
+Start only the required services (MySQL, Redis).
 
 ```bash
-docker-compose up -d db redis kafka zookeeper elasticsearch kibana
+docker-compose up -d db redis
 ```
 
 #### 2. Backend Setup (`cbt-be`)

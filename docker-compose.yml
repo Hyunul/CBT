@@ -32,33 +32,6 @@ services:
       - redis_data:/data
     restart: always
 
-  # Zookeeper for Kafka
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
-    container_name: zookeeper
-    restart: always
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-
-  # Kafka Broker
-  kafka:
-    image: confluentinc/cp-kafka:7.0.1
-    container_name: kafka
-    restart: always
-    ports:
-      - "9092:9092"
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_INTERNAL://kafka:19092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_HEAP_OPTS: "-Xmx256m -Xms256m"
-
   # 3. Spring Boot Backend Application
   backend:
     image: ${DOCKER_USERNAME}/cbt-backend:latest
@@ -72,18 +45,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: root_password
       # Redis 설정
       SPRING_REDIS_HOST: redis
-      # Elasticsearch 설정
-      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
-      # Kafka 설정
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
-      elasticsearch:
-        condition: service_started
-      kafka:
         condition: service_started
     restart: always
 
@@ -102,38 +67,6 @@ services:
       - backend
     restart: always
 
-  # 5. Elasticsearch (ELK Stack)
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
-    container_name: cbt-elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: false
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    restart: always
-
-  # 6. Kibana (ELK Stack Visualization)
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.1
-    container_name: cbt-kibana
-    ports:
-      - "5601:5601"
-    environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-    depends_on:
-      - elasticsearch
-    restart: always
-
 volumes:
   mysql_data:
   redis_data:
-  elasticsearch_data:
