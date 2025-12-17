@@ -62,7 +62,7 @@ services:
       # 중요: 브라우저(클라이언트)에서 접근할 API 주소입니다.
       # EC2의 공인 IP나 도메인이 있다면 그것으로 변경해야 합니다.
       # 예: http://<EC2-PUBLIC-IP>:8080
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     depends_on:
       - backend
     restart: always

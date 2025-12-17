@@ -104,6 +104,7 @@ jobs:
             }
 
             upsert_env "DOCKER_USERNAME" "${{ secrets.DOCKER_USERNAME }}"
+            upsert_env "NEXT_PUBLIC_API_URL" "${{ secrets.NEXT_PUBLIC_API_URL }}"
 
             echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
