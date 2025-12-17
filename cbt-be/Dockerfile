@@ -5,7 +5,7 @@ WORKDIR /app
 # 1) Gradle wrapper/설정 먼저 복사 (캐시 효율)
 COPY gradlew ./
 COPY gradle ./gradle
-COPY build.gradle* settings.gradle* gradle.properties ./
+COPY build.gradle* settings.gradle* ./
 
 RUN chmod +x ./gradlew
 
