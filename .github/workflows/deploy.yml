@@ -57,15 +57,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Ensure target directory exists on EC2
+      - name: Fix permissions on EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            set -euo pipefail
-            mkdir -p /home/${{ secrets.EC2_USERNAME }}/CBT
+            sudo mkdir -p /home/${{ secrets.EC2_USERNAME }}/CBT
+            sudo chown -R $(whoami) /home/${{ secrets.EC2_USERNAME }}/CBT
+            sudo chmod -R u+w /home/${{ secrets.EC2_USERNAME }}/CBT
 
       - name: Copy docker-compose.yml to EC2
         uses: appleboy/scp-action@master
