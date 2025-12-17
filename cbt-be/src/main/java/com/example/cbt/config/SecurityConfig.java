@@ -44,7 +44,9 @@ public class SecurityConfig {
                             "/v3/api-docs/**",
                             "/api/auth/signup",
                             "/api/auth/login",
-                            "/api/series/**"
+                            "/api/series/**",
+                            "/api/ranking/**",
+                            "/api/attempts/**"
                     ).permitAll()
                     // Explicitly secure the history endpoint BEFORE the wildcard permitAll
                     .requestMatchers("/api/attempts/history").authenticated()
