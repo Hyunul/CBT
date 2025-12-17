@@ -17,7 +17,7 @@ services:
       - mysql_data:/var/lib/mysql
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-proot_password"]
       timeout: 20s
       retries: 10
 
@@ -68,8 +68,8 @@ services:
     environment:
       # DB 설정
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: cbt_user
-      SPRING_DATASOURCE_PASSWORD: cbt_password
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root_password
       # Redis 설정
       SPRING_REDIS_HOST: redis
       # Elasticsearch 설정
