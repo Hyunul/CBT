@@ -57,20 +57,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Ensure target directory exists on EC2
-        uses: appleboy/ssh-action@v1.2.4
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -euo pipefail
-            mkdir -p /home/${{ secrets.EC2_USERNAME }}/CBT
-
       - name: Start SSH agent and add key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Ensure target directory exists on EC2
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} \
+            "mkdir -p /home/${{ secrets.EC2_USERNAME }}/CBT"
 
       - name: Copy docker-compose.yml to EC2 (overwrite)
         run: |
@@ -80,12 +77,10 @@ jobs:
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USERNAME }}/CBT/docker-compose.yml
 
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.4
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -euo pipefail
 
             cd /home/${{ secrets.EC2_USERNAME }}/CBT
@@ -116,3 +111,4 @@ jobs:
             sudo $COMPOSE up -d --remove-orphans
 
             sudo docker image prune -f
+          EOF
