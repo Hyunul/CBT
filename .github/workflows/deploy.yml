@@ -88,11 +88,18 @@ jobs:
 
             cd /home/${{ secrets.EC2_USERNAME }}/CBT
 
+            # 1. Docker Compose 감지 및 자동 설치
             if sudo docker compose version >/dev/null 2>&1; then
               COMPOSE="docker compose"
+            elif sudo docker-compose version >/dev/null 2>&1; then
+              COMPOSE="docker-compose"
             else
+              echo "Docker Compose not found. Installing standalone version..."
+              sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
               COMPOSE="docker-compose"
             fi
+            echo "Using Compose command: sudo $COMPOSE"
 
             touch .env
 
