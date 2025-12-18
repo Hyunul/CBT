@@ -1,0 +1,25 @@
+spring:
+    config:
+        activate:
+            on-profile: prod
+    datasource:
+        url: ${SPRING_DATASOURCE_URL}
+        username: ${SPRING_DATASOURCE_USERNAME}
+        password: ${SPRING_DATASOURCE_PASSWORD}
+    jpa:
+        hibernate:
+            ddl-auto: validate
+        properties:
+            hibernate:
+                format_sql: false
+                use_sql_comments: false
+    data:
+        redis:
+            host: ${SPRING_DATA_REDIS_HOST:redis}
+            port: ${SPRING_DATA_REDIS_PORT:6379}
+            password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+logging:
+    level:
+        org.hibernate.SQL: info
+        com.example.cbt: info

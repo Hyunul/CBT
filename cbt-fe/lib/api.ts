@@ -42,13 +42,62 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...init,
     headers,
   });
-  if (!res.ok) {
-    if (res.status === 401) {
+
+  if (res.status === 401) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+          const refreshToken = localStorage.getItem("refreshToken");
+          if (refreshToken) {
+              try {
+                  // Try to refresh the token
+                  const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ refreshToken }),
+                  });
+
+                  if (refreshRes.ok) {
+                      const data = await refreshRes.json();
+                      if (data.success && data.data) {
+                          const { accessToken, refreshToken: newRefreshToken } = data.data;
+                          
+                          // Update tokens in localStorage
+                          localStorage.setItem("token", accessToken);
+                          if (newRefreshToken) {
+                              localStorage.setItem("refreshToken", newRefreshToken);
+                          }
+
+                          // Retry the original request with the new token
+                          const newHeaders = {
+                              ...headers,
+                              Authorization: `Bearer ${accessToken}`,
+                          };
+                          
+                          const retryRes = await fetch(`${API_BASE}${path}`, {
+                              ...init,
+                              headers: newHeaders,
+                          });
+                          
+                          // Return the result of the retried request
+                          if (retryRes.ok) {
+                              return retryRes.json();
+                          }
+                          // If retried request fails, continue to error handling below
+                      }
+                  }
+              } catch (refreshError) {
+                  // If refresh fails, fall through to logout
+                  console.error("Token refresh failed", refreshError);
+              }
+          }
+
+          // If we are here, either no refresh token, or refresh failed.
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          window.location.href = "/login";
       }
-    }
+  }
+
+  if (!res.ok) {
     
     let errorMessage = "Request failed";
     try {

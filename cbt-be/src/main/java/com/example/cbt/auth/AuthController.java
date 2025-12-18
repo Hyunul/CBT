@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.cbt.auth.dto.LoginReq;
 import com.example.cbt.auth.dto.LoginRes;
+import com.example.cbt.auth.dto.RefreshTokenReq;
 import com.example.cbt.auth.dto.SignupReq;
 import com.example.cbt.common.ApiResponse;
 import com.example.cbt.user.User;
@@ -30,5 +31,10 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginRes> login(@RequestBody LoginReq req) {
         return ApiResponse.ok(authService.login(req.username(), req.password()));
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<LoginRes> refresh(@RequestBody RefreshTokenReq req) {
+        return ApiResponse.ok(authService.refreshToken(req.refreshToken()));
     }
 }

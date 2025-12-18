@@ -28,6 +28,7 @@ export default function LoginPage() {
             const res = await api<{
                 data: {
                     accessToken: string;
+                    refreshToken: string;
                     userId: number;
                     username: string;
                     role: string;
@@ -42,11 +43,12 @@ export default function LoginPage() {
 
             const {
                 accessToken,
+                refreshToken,
                 userId,
                 username: resUsername,
                 role,
             } = res.data;
-            login(accessToken, userId, resUsername, role);
+            login(accessToken, refreshToken, userId, resUsername, role);
 
             // Next.js 라우터를 사용하여 페이지 이동
             router.push("/");

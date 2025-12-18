@@ -4,31 +4,35 @@ import { create } from "zustand";
 
 interface AuthStore {
     token: string | null;
+    refreshToken: string | null; // Added
     userId: number | null;
     username: string | null;
     role: string | null;
-    login: (token: string, userId: number, username: string, role: string) => void;
+    login: (token: string, refreshToken: string, userId: number, username: string, role: string) => void; // Updated signature
     logout: () => void;
-    isLoaded: boolean; // 초기 로딩 완료 체크
+    isLoaded: boolean; 
 }
 
 export const useAuth = create<AuthStore>((set) => ({
     token: null,
+    refreshToken: null, // Added
     userId: null,
     username: null,
     role: null,
     isLoaded: false,
 
     // 로그인 처리
-    login: (token, userId, username, role) => {
+    login: (token, refreshToken, userId, username, role) => {
         // 로컬스토리지 저장
         localStorage.setItem("token", token);
+        localStorage.setItem("refreshToken", refreshToken); // Added
         localStorage.setItem("userId", String(userId));
         localStorage.setItem("username", username);
         localStorage.setItem("role", role);
 
         set({
             token,
+            refreshToken, // Added
             userId,
             username,
             role,
@@ -39,12 +43,14 @@ export const useAuth = create<AuthStore>((set) => ({
     // 로그아웃 처리
     logout: () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken"); // Added
         localStorage.removeItem("userId");
         localStorage.removeItem("username");
         localStorage.removeItem("role");
 
         set({
             token: null,
+            refreshToken: null, // Added
             userId: null,
             username: null,
             role: null,
@@ -59,6 +65,7 @@ export const useAuth = create<AuthStore>((set) => ({
 // 초기화: 새로고침 후 로그인 유지
 if (typeof window !== "undefined") {
     const token = localStorage.getItem("token");
+    const refreshToken = localStorage.getItem("refreshToken"); // Added
     const userId = localStorage.getItem("userId");
     const username = localStorage.getItem("username");
     const role = localStorage.getItem("role");
@@ -66,6 +73,7 @@ if (typeof window !== "undefined") {
     if (token && userId) {
         useAuth.setState({
             token,
+            refreshToken: refreshToken || null, // Added
             userId: Number(userId),
             username: username || "",
             role: role || "",
