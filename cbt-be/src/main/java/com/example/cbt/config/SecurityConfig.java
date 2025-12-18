@@ -38,6 +38,9 @@ public class SecurityConfig {
                     // New Admin-only endpoint for fetching questions with answers
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams/*/questions/admin").hasAuthority("ROLE_ADMIN")
 
+                    // Explicitly secure the history endpoint BEFORE the wildcard permitAll
+                    .requestMatchers("/api/attempts/history").authenticated()
+
                     // --- Public Endpoints ---
                     .requestMatchers(
                             "/swagger-ui/**",
@@ -48,8 +51,6 @@ public class SecurityConfig {
                             "/api/ranking/**",
                             "/api/attempts/**"
                     ).permitAll()
-                    // Explicitly secure the history endpoint BEFORE the wildcard permitAll
-                    .requestMatchers("/api/attempts/history").authenticated()
                     
                     // Allow viewing exams to everyone (this is safe because admin rules for exams are already defined above)
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams", "/api/exams/**", "/api/ranking/**").permitAll()
