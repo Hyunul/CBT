@@ -48,6 +48,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (user != null) {
                 CustomUserDetails userDetails = new CustomUserDetails(user);
 
+                log.info("Authenticated User: ID={}, Role={}", user.getId(), user.getRole());
+
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken (
                     userDetails, 
                     null, 
@@ -55,6 +57,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
+            } else {
+                log.warn("User not found for ID: {}", userId);
             }
         } catch (Exception e) {
             log.error("JWT Authentication failed: {}", e.getMessage());
