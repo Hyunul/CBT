@@ -111,3 +111,22 @@ export async function getExamList(): Promise<ExamListRes> {
   const res = await api<{ success: boolean; data: ExamListRes }>("/api/exams/list");
   return res.data;
 }
+
+export async function getSeriesList(): Promise<ExamSeries[]> {
+  const res = await api<{ success: boolean; data: ExamSeries[] }>("/api/series");
+  return res.data;
+}
+
+export async function createSeries(name: string, description: string): Promise<ExamSeries> {
+  const res = await api<{ success: boolean; data: ExamSeries }>("/api/series", {
+      method: "POST",
+      body: JSON.stringify({ name, description }),
+  });
+  return res.data;
+}
+
+export async function deleteSeries(id: number, force: boolean = false): Promise<void> {
+  await api(`/api/series/${id}?force=${force}`, {
+      method: "DELETE",
+  });
+}

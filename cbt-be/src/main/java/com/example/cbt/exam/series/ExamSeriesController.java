@@ -30,8 +30,8 @@ public class ExamSeriesController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteSeries(@PathVariable Long id) {
-        examSeriesService.delete(id);
+    public ApiResponse<Void> deleteSeries(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean force) {
+        examSeriesService.delete(id, force);
         return ApiResponse.ok();
     }
 }

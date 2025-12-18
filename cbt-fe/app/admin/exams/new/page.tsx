@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { api, getSeriesList, ExamSeries } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -12,6 +12,15 @@ export default function NewExamPage() {
     const [title, setTitle] = useState("");
     const [durationSec, setDurationSec] = useState(600);
     const [published, setPublished] = useState(false);
+    
+    // 시리즈 관련
+    const [seriesList, setSeriesList] = useState<ExamSeries[]>([]);
+    const [selectedSeriesId, setSelectedSeriesId] = useState<number | null>(null);
+    const [round, setRound] = useState<number | "">("");
+
+    useEffect(() => {
+        getSeriesList().then(setSeriesList).catch(console.error);
+    }, []);
 
     const createExam = async () => {
         try {
@@ -21,6 +30,8 @@ export default function NewExamPage() {
                     title,
                     durationSec,
                     isPublished: published,
+                    seriesId: selectedSeriesId,
+                    round: round === "" ? null : Number(round),
                 }),
             });
 
@@ -44,6 +55,36 @@ export default function NewExamPage() {
                     placeholder="예) 2025 NCS 직업기초능력 시험"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                />
+            </div>
+
+            {/* 시리즈 (과목) 선택 */}
+            <div>
+                <label className="block font-semibold mb-1">시리즈(과목) 선택 (선택)</label>
+                <select 
+                    className="w-full border p-2 rounded"
+                    value={selectedSeriesId || ""}
+                    onChange={(e) => setSelectedSeriesId(e.target.value ? Number(e.target.value) : null)}
+                >
+                    <option value="">-- 시리즈 선택 안함 --</option>
+                    {seriesList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                            {s.name}
+                        </option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">시리즈가 없다면 '시리즈 관리'에서 먼저 생성하세요.</p>
+            </div>
+
+            {/* 회차 */}
+            <div>
+                <label className="block font-semibold mb-1">회차 (선택)</label>
+                <input
+                    type="number"
+                    className="w-full border p-2 rounded"
+                    placeholder="예) 1"
+                    value={round}
+                    onChange={(e) => setRound(e.target.value === "" ? "" : Number(e.target.value))}
                 />
             </div>
 

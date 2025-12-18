@@ -31,12 +31,20 @@ export default function Navbar() {
                                 나의 응시 이력
                             </Link>
                             {role === "ROLE_ADMIN" && (
-                                <Link
-                                    href="/admin/exams"
-                                    className="text-foreground/60 transition-colors hover:text-foreground/80"
-                                >
-                                    시험 관리
-                                </Link>
+                                <>
+                                    <Link
+                                        href="/admin/exams"
+                                        className="text-foreground/60 transition-colors hover:text-foreground/80"
+                                    >
+                                        시험 관리
+                                    </Link>
+                                    <Link
+                                        href="/admin/series"
+                                        className="text-foreground/60 transition-colors hover:text-foreground/80"
+                                    >
+                                        시리즈 관리
+                                    </Link>
+                                </>
                             )}
                         </>
                     )}

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AttemptRepository extends JpaRepository<Attempt, Long> {
     List<Attempt> findByExamIdAndSubmittedAtIsNull(Long examId);
+    List<Attempt> findByExamId(Long examId);
     boolean existsByExamIdAndSubmittedAtIsNotNull(Long examId);
     Optional<Attempt> findById(Long attemptId);
     @Query("SELECT a FROM Attempt a JOIN FETCH a.exam e WHERE a.user.id = :userId AND a.submittedAt IS NOT NULL ORDER BY a.startedAt DESC")

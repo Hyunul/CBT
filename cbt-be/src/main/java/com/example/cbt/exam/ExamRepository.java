@@ -8,13 +8,15 @@ import java.util.List;
 
 @Repository
 public interface ExamRepository extends JpaRepository<Exam, Long>, JpaSpecificationExecutor<Exam> {
-    List<Exam> findAllByOrderByIdDesc();
     List<Exam> findByAuthorId(Long userId);
     List<Exam> findTop10ByIsPublishedTrueOrderByAttemptCountDesc();
     List<Exam> findAllByIsPublishedTrueAndIdNotIn(List<Long> ids);
     
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"series"})
     List<Exam> findBySeriesIdOrderByRoundAsc(Long seriesId);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"series"})
+    List<Exam> findAllByOrderByIdDesc();
 
     boolean existsBySeriesId(Long seriesId);
 }
