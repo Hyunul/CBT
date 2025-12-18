@@ -45,7 +45,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/cbt-frontend:latest
           build-args: |
-            NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_HOST }}
+            NEXT_PUBLIC_API_URL=https://${{ secrets.EC2_HOST }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache,mode=max
 
@@ -127,7 +127,7 @@ jobs:
 
             upsert_env "DOCKER_USERNAME" "${{ secrets.DOCKER_USERNAME }}"
             # Use EC2_HOST to construct the API URL
-            upsert_env "NEXT_PUBLIC_API_URL" "http://${{ secrets.EC2_HOST }}"
+            upsert_env "NEXT_PUBLIC_API_URL" "https://${{ secrets.EC2_HOST }}"
 
             echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
