@@ -1,27 +1,28 @@
 package com.example.cbt.grading;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.example.cbt.attempt.Answer;
 import com.example.cbt.attempt.AnswerRepository;
 import com.example.cbt.attempt.Attempt;
 import com.example.cbt.question.Question;
 import com.example.cbt.question.QuestionRepository;
 import com.example.cbt.question.QuestionType;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class GradingService {
 
-    private final QuestionRepository questionRepository;
+    // private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
 
     public GradingResult gradeAttempt(Attempt attempt) {
         List<Answer> answers = answerRepository.findByAttemptId(attempt.getId());
-        List<Question> questions = questionRepository.findByExamId(attempt.getExam().getId());
+        // List<Question> questions = questionRepository.findByExamId(attempt.getExam().getId());
 
         int totalScore = 0;
         int correctCnt = 0;
