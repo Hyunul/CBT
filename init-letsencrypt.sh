@@ -36,6 +36,9 @@ echo "### Starting nginx ..."
 docker compose up -d nginx
 echo
 
+echo "### Waiting for Nginx to start..."
+sleep 10
+
 echo "### Deleting dummy certificate for $domains ..."
 docker compose run --rm --entrypoint "rm -rf /etc/letsencrypt/live/$domains && rm -rf /etc/letsencrypt/archive/$domains && rm -rf /etc/letsencrypt/renewal/$domains.conf" certbot
 echo
