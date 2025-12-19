@@ -68,22 +68,22 @@ GitHub Mermaid를 활용한 전체 시스템 구성도입니다. **Nginx**가 �
 
 ```mermaid
 graph TD
-    User[👤 User / Client]
+    User["👤 User / Client"]
     
     subgraph "🐳 Docker Host (EC2)"
-        Nginx[🛡️ Nginx (Reverse Proxy)]
+        Nginx["🛡️ Nginx (Reverse Proxy)"]
         
         subgraph "Frontend Container"
-            NextJS[🖥️ Next.js (SSR)]
+            NextJS["🖥️ Next.js (SSR)"]
         end
         
         subgraph "Backend Container"
-            SpringBoot[🍃 Spring Boot API]
+            SpringBoot["🍃 Spring Boot API"]
         end
         
         subgraph "Data Persistence"
-            Redis[(⚡ Redis\nCache & Ranking)]
-            MySQL[(🐬 MySQL\nMain DB)]
+            Redis[("⚡ Redis\nCache & Ranking")]
+            MySQL[("🐬 MySQL\nMain DB")]
         end
     end
 
