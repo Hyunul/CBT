@@ -45,6 +45,11 @@ public class ExamService {
         if (req.getSeriesId() != null) {
             series = examSeriesRepository.findById(req.getSeriesId())
                 .orElseThrow(() -> new RuntimeException("Series not found"));
+            
+            // Validate unique constraint
+            if (req.getRound() != null && examRepository.existsBySeriesIdAndRound(req.getSeriesId(), req.getRound())) {
+                throw new RuntimeException("이미 해당 시리즈에 존재하는 회차입니다: " + req.getRound() + "회차");
+            }
         }
 
         Exam exam = Exam.builder()

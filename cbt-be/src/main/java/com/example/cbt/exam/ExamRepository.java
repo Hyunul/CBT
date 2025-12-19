@@ -19,4 +19,6 @@ public interface ExamRepository extends JpaRepository<Exam, Long>, JpaSpecificat
     List<Exam> findAllByOrderByIdDesc();
 
     boolean existsBySeriesId(Long seriesId);
+
+    boolean existsBySeriesIdAndRound(Long seriesId, Integer round);
 }
