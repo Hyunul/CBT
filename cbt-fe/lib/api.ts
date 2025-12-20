@@ -42,6 +42,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   let cleanPath = path;
   if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
       cleanPath = path.substring(4);
+  } else if (API_BASE.endsWith("/") && path.startsWith("/api/")) {
+      // Prevent double slashes e.g. https://domain.com//api/...
+       cleanPath = path.substring(1);
   }
 
   const res = await fetch(`${API_BASE}${cleanPath}`, {

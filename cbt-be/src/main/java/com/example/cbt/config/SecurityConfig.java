@@ -28,6 +28,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .authorizeHttpRequests(auth -> auth
+                    .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.FORWARD, jakarta.servlet.DispatcherType.ERROR).permitAll()
                     // --- Admin Endpoints (most specific) ---
                     .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exams/all").hasAuthority("ROLE_ADMIN")
@@ -43,6 +44,7 @@ public class SecurityConfig {
 
                     // --- Public Endpoints ---
                     .requestMatchers(
+                            "/error",
                             "/swagger-ui/**",
                             "/v3/api-docs/**",
                             "/api/auth/signup",
