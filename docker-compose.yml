@@ -60,6 +60,9 @@ services:
 
   # 3. Spring Boot Backend Application
   backend:
+    build:
+      context: ./cbt-be
+      dockerfile: Dockerfile
     image: ${DOCKER_USERNAME}/cbt-backend:latest
     container_name: cbt-backend
     # ports:
@@ -70,7 +73,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root_password
       # Redis 설정
-      SPRING_REDIS_HOST: redis
+      SPRING_DATA_REDIS_HOST: redis
       # JVM 메모리 설정 (t3.small 2GB 기준: 최대 1GB 할당)
       JAVA_OPTS: "-Xms512m -Xmx1024m"
       # CORS 설정 (모든 Origin 허용)

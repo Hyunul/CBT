@@ -15,6 +15,10 @@ import com.example.cbt.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.ResponseEntity;
+
+// ... imports
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -29,8 +33,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<LoginRes> login(@RequestBody LoginReq req) {
-        return ApiResponse.ok(authService.login(req.username(), req.password()));
+    public ResponseEntity<ApiResponse<LoginRes>> login(@RequestBody LoginReq req) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(authService.login(req.username(), req.password())));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping("/refresh")

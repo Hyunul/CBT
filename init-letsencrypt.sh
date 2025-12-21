@@ -5,7 +5,7 @@ if ! [ -x "$(command -v docker compose)" ]; then
   exit 1
 fi
 
-domains=(www.hyunul.shop)
+domains=(www.hyunul.shop hyunul.shop)
 rsa_key_size=4096
 data_path="./certbot"
 email="" # 이메일 주소 입력 권장 (예: your-email@example.com)

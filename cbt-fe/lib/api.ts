@@ -38,7 +38,16 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  // Prevent double /api if API_BASE ends with /api and path starts with /api
+  let cleanPath = path;
+  if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
+      cleanPath = path.substring(4);
+  } else if (API_BASE.endsWith("/") && path.startsWith("/api/")) {
+      // Prevent double slashes e.g. https://domain.com//api/...
+       cleanPath = path.substring(1);
+  }
+
+  const res = await fetch(`${API_BASE}${cleanPath}`, {
     ...init,
     headers,
   });
@@ -49,7 +58,13 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
           if (refreshToken) {
               try {
                   // Try to refresh the token
-                  const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+                  // Also handle potential double /api for refresh endpoint
+                  let refreshPath = "/api/auth/refresh";
+                  if (API_BASE.endsWith("/api")) {
+                      refreshPath = "/auth/refresh";
+                  }
+
+                  const refreshRes = await fetch(`${API_BASE}${refreshPath}`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ refreshToken }),
@@ -72,7 +87,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
                               Authorization: `Bearer ${accessToken}`,
                           };
                           
-                          const retryRes = await fetch(`${API_BASE}${path}`, {
+                          const retryRes = await fetch(`${API_BASE}${cleanPath}`, {
                               ...init,
                               headers: newHeaders,
                           });

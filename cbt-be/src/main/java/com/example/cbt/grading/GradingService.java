@@ -8,7 +8,6 @@ import com.example.cbt.attempt.Answer;
 import com.example.cbt.attempt.AnswerRepository;
 import com.example.cbt.attempt.Attempt;
 import com.example.cbt.question.Question;
-import com.example.cbt.question.QuestionRepository;
 import com.example.cbt.question.QuestionType;
 
 import lombok.RequiredArgsConstructor;
