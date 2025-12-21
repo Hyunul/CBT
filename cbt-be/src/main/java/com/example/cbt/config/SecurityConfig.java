@@ -49,6 +49,7 @@ public class SecurityConfig {
                             "/v3/api-docs/**",
                             "/api/auth/signup",
                             "/api/auth/login",
+                            "/api/auth/refresh",
                             "/api/series/**",
                             "/api/ranking/**",
                             "/api/attempts/**"
