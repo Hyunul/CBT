@@ -60,6 +60,9 @@ services:
 
   # 3. Spring Boot Backend Application
   backend:
+    build:
+      context: ./cbt-be
+      dockerfile: Dockerfile
     image: ${DOCKER_USERNAME}/cbt-backend:latest
     container_name: cbt-backend
     # ports:
