@@ -102,27 +102,17 @@ graph TD
         end
 
         subgraph "Data Persistence"
-            Redis[("Redis\nCache & Ranking")]
-            MySQL[("MySQL\nMain DB")]
+            Redis[("Redis Cache & Ranking")]
+            MySQL[("MySQL Main DB")]
         end
     end
 
-    User -- "HTTPS (443)" --> Nginx
-
-    Nginx -- "/ (Page Request)" --> NextJS
-    Nginx -- "/api (Data Request)" --> SpringBoot
-
-    SpringBoot -- "Read/Write (Cache)" --> Redis
-    SpringBoot -- "Read/Write (Data)" --> MySQL
-
-    NextJS -.->|API Call| Nginx
-
-    style Nginx fill:#009639,stroke:#333,stroke-width:2px,color:white
-    style SpringBoot fill:#6DB33F,stroke:#333,stroke-width:2px,color:white
-    style Redis fill:#DC382D,stroke:#333,stroke-width:2px,color:white
-    style MySQL fill:#4479A1,stroke:#333,stroke-width:2px,color:white
-    style NextJS fill:#000000,stroke:#333,stroke-width:2px,color:white
-
+    User --> Nginx
+    Nginx --> NextJS
+    Nginx --> SpringBoot
+    SpringBoot --> Redis
+    SpringBoot --> MySQL
+    NextJS -.-> Nginx
 ```
 
 ### 아키텍처 특징
