@@ -102,8 +102,8 @@ graph TD
         end
 
         subgraph "Data Persistence"
-            Redis[("Redis Cache & Ranking")]
-            MySQL[("MySQL Main DB")]
+            Redis[("Redis Cache<br>Ranking")]
+            MySQL[("MySQL<br>Main DB")]
         end
     end
 
