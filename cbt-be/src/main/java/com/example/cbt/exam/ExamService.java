@@ -89,7 +89,7 @@ public class ExamService {
     }
 
     public List<Exam> getBySeriesId(Long seriesId) {
-        return examRepository.findBySeriesIdOrderByRoundAsc(seriesId);
+        return examRepository.findBySeriesIdAndIsPublishedTrueOrderByRoundAsc(seriesId);
     }
 
     @Transactional(readOnly = true)
