@@ -88,45 +88,41 @@ GitHub Mermaid를 활용한 전체 시스템 구성도입니다. **Nginx**가 �
 
 ```mermaid
 graph TD
-    User["👤 User / Client"]
+    User["User / Client"]
 
-    subgraph "🐳 Docker Host (EC2)"
-        Nginx["🛡️ Nginx (Reverse Proxy)"]
+    subgraph "Docker Host (EC2)"
+        Nginx["Nginx (Reverse Proxy)"]
 
         subgraph "Frontend Container"
-            NextJS["🖥️ Next.js (SSR)"]
+            NextJS["Next.js (SSR)"]
         end
 
         subgraph "Backend Container"
-            SpringBoot["🍃 Spring Boot API"]
+            SpringBoot["Spring Boot API"]
         end
 
         subgraph "Data Persistence"
-            Redis[("⚡ Redis\nCache & Ranking")]
-            MySQL[("🐬 MySQL\nMain DB")]
+            Redis[("Redis\nCache & Ranking")]
+            MySQL[("MySQL\nMain DB")]
         end
     end
 
-    %% Network Flow
     User -- "HTTPS (443)" --> Nginx
 
-    %% Nginx Routing
     Nginx -- "/ (Page Request)" --> NextJS
     Nginx -- "/api (Data Request)" --> SpringBoot
 
-    %% Backend Communication
     SpringBoot -- "Read/Write (Cache)" --> Redis
     SpringBoot -- "Read/Write (Data)" --> MySQL
 
-    %% Frontend API Call (Client Side)
     NextJS -.->|API Call| Nginx
 
-    %% Styling
     style Nginx fill:#009639,stroke:#333,stroke-width:2px,color:white
     style SpringBoot fill:#6DB33F,stroke:#333,stroke-width:2px,color:white
     style Redis fill:#DC382D,stroke:#333,stroke-width:2px,color:white
     style MySQL fill:#4479A1,stroke:#333,stroke-width:2px,color:white
     style NextJS fill:#000000,stroke:#333,stroke-width:2px,color:white
+
 ```
 
 ### 아키텍처 특징
