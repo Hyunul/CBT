@@ -9,5 +9,6 @@ public class ExamSaveReq {
     private Integer durationSec;
     private Long seriesId; // 과목(시리즈) ID
     private Integer round; // 회차
+    @com.fasterxml.jackson.annotation.JsonProperty("isPublished")
     private boolean isPublished;
 }

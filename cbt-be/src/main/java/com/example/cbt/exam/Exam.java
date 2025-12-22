@@ -48,6 +48,7 @@ public class Exam {
     private Integer totalScore; // 총점
 
     @Column(nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty("isPublished")
     private boolean isPublished; // 공개 여부
 
     @ManyToOne(fetch = FetchType.LAZY)

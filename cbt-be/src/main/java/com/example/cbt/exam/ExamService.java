@@ -73,6 +73,7 @@ public class ExamService {
         if (req.getTitle() != null) exam.setTitle(req.getTitle());
         if (req.getDescription() != null) exam.setDescription(req.getDescription());
         if (req.getDurationSec() != null) exam.setDurationSec(req.getDurationSec());
+        exam.setPublished(req.isPublished());
         
         // Update Series/Round if provided
         if (req.getSeriesId() != null) {
