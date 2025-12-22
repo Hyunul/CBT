@@ -23,6 +23,11 @@ public class ExamSeriesController {
     public ApiResponse<ExamSeries> createSeries(@RequestBody ExamSeries series) {
         return ApiResponse.ok(examSeriesRepository.save(series));
     }
+
+    @PutMapping("/{id}")
+    public ApiResponse<ExamSeries> updateSeries(@PathVariable Long id, @RequestBody ExamSeries series) {
+        return ApiResponse.ok(examSeriesService.update(id, series.getName(), series.getDescription()));
+    }
     
     @GetMapping("/{id}")
     public ApiResponse<ExamSeries> getSeries(@PathVariable Long id) {

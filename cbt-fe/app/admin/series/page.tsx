@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createSeries, deleteSeries, getSeriesList, ExamSeries } from "@/lib/api";
+import { createSeries, deleteSeries, getSeriesList, updateSeries, ExamSeries } from "@/lib/api";
 import toast from "react-hot-toast";
 
 export default function SeriesManagementPage() {
@@ -9,6 +9,11 @@ export default function SeriesManagementPage() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // Editing state
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editName, setEditName] = useState("");
+    const [editDescription, setEditDescription] = useState("");
 
     const loadSeries = () => {
         getSeriesList()
@@ -70,6 +75,32 @@ export default function SeriesManagementPage() {
         }
     };
 
+    const startEdit = (series: ExamSeries) => {
+        setEditingId(series.id);
+        setEditName(series.name);
+        setEditDescription(series.description || "");
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+    };
+
+    const handleUpdate = async (id: number) => {
+        if (!editName.trim()) {
+            toast.error("이름을 입력해주세요.");
+            return;
+        }
+        try {
+            await updateSeries(id, editName, editDescription);
+            toast.success("수정되었습니다.");
+            setEditingId(null);
+            loadSeries();
+        } catch (err: any) {
+            console.error(err);
+            toast.error("수정 실패: " + err.message);
+        }
+    };
+
     return (
         <main className="max-w-4xl mx-auto p-8 space-y-8">
             <h1 className="text-2xl font-bold">시리즈(과목) 관리</h1>
@@ -118,26 +149,70 @@ export default function SeriesManagementPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b text-gray-600 text-sm">
-                                    <th className="py-2 px-3">ID</th>
-                                    <th className="py-2 px-3">이름</th>
+                                    <th className="py-2 px-3 w-16">ID</th>
+                                    <th className="py-2 px-3 w-1/4">이름</th>
                                     <th className="py-2 px-3">설명</th>
-                                    <th className="py-2 px-3 text-right">관리</th>
+                                    <th className="py-2 px-3 text-right w-40">관리</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {seriesList.map((series) => (
                                     <tr key={series.id} className="border-b hover:bg-gray-50">
                                         <td className="py-3 px-3">{series.id}</td>
-                                        <td className="py-3 px-3 font-medium">{series.name}</td>
-                                        <td className="py-3 px-3 text-gray-500">{series.description}</td>
-                                        <td className="py-3 px-3 text-right">
-                                            <button
-                                                onClick={() => handleDelete(series.id)}
-                                                className="text-red-500 hover:text-red-700 text-sm font-medium"
-                                            >
-                                                삭제
-                                            </button>
-                                        </td>
+                                        
+                                        {editingId === series.id ? (
+                                            // Edit Mode
+                                            <>
+                                                <td className="py-3 px-3">
+                                                    <input
+                                                        className="w-full border p-1 rounded"
+                                                        value={editName}
+                                                        onChange={(e) => setEditName(e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                    <input
+                                                        className="w-full border p-1 rounded"
+                                                        value={editDescription}
+                                                        onChange={(e) => setEditDescription(e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="py-3 px-3 text-right space-x-2">
+                                                    <button
+                                                        onClick={() => handleUpdate(series.id)}
+                                                        className="text-green-600 font-bold hover:underline"
+                                                    >
+                                                        저장
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelEdit}
+                                                        className="text-gray-500 hover:underline"
+                                                    >
+                                                        취소
+                                                    </button>
+                                                </td>
+                                            </>
+                                        ) : (
+                                            // View Mode
+                                            <>
+                                                <td className="py-3 px-3 font-medium">{series.name}</td>
+                                                <td className="py-3 px-3 text-gray-500">{series.description}</td>
+                                                <td className="py-3 px-3 text-right space-x-2">
+                                                    <button
+                                                        onClick={() => startEdit(series)}
+                                                        className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                                                    >
+                                                        수정
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(series.id)}
+                                                        className="text-red-500 hover:text-red-700 text-sm font-medium"
+                                                    >
+                                                        삭제
+                                                    </button>
+                                                </td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

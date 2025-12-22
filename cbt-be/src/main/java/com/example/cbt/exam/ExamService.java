@@ -54,6 +54,7 @@ public class ExamService {
 
         Exam exam = Exam.builder()
                 .title(req.getTitle())
+                .description(req.getDescription())
                 .durationSec(req.getDurationSec())
                 .series(series)
                 .round(req.getRound())
@@ -61,6 +62,35 @@ public class ExamService {
                 .author(user)
                 .build();
         
+        return examRepository.save(exam);
+    }
+
+    @Transactional
+    public Exam update(Long id, ExamSaveReq req) {
+        Exam exam = get(id);
+        
+        // Update basic fields
+        if (req.getTitle() != null) exam.setTitle(req.getTitle());
+        if (req.getDescription() != null) exam.setDescription(req.getDescription());
+        if (req.getDurationSec() != null) exam.setDurationSec(req.getDurationSec());
+        
+        // Update Series/Round if provided
+        if (req.getSeriesId() != null) {
+            ExamSeries series = examSeriesRepository.findById(req.getSeriesId())
+                    .orElseThrow(() -> new RuntimeException("Series not found"));
+            exam.setSeries(series);
+        }
+        if (req.getRound() != null) {
+            // Check for uniqueness if series or round changed
+            if (!req.getRound().equals(exam.getRound()) || (req.getSeriesId() != null && !req.getSeriesId().equals(exam.getSeries().getId()))) {
+                 Long seriesId = req.getSeriesId() != null ? req.getSeriesId() : exam.getSeries().getId();
+                 if (examRepository.existsBySeriesIdAndRound(seriesId, req.getRound())) {
+                     throw new RuntimeException("이미 해당 시리즈에 존재하는 회차입니다: " + req.getRound() + "회차");
+                 }
+            }
+            exam.setRound(req.getRound());
+        }
+
         return examRepository.save(exam);
     }
 

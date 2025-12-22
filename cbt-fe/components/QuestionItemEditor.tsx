@@ -1,15 +1,27 @@
 "use client";
 
 import { Lightbulb } from "lucide-react";
+import TextareaAuto from "./TextareaAuto";
 
-// 선택지 파싱 (항상 키를 기준으로 정렬)
+// 선택지 파싱 (항상 키를 기준으로 정렬하고 1부터 시작하는 숫자로 재할당)
 const parseChoices = (choices: any) => {
   try {
     if (typeof choices === "string") choices = JSON.parse(choices);
-    // 키(A, B, C...)를 기준으로 항상 정렬하여 순서를 보장합니다.
-    return Object.entries(choices || {})
-      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-      .map(([key, text]) => ({ key, text: text as string }));
+    
+    // 1. 키를 기준으로 정렬 (숫자 우선, 그 외 문자열)
+    const sortedEntries = Object.entries(choices || {})
+      .sort(([keyA], [keyB]) => {
+        const numA = Number(keyA);
+        const numB = Number(keyB);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return keyA.localeCompare(keyB);
+      });
+
+    // 2. 정렬된 순서대로 1부터 시작하는 키로 재매핑
+    return sortedEntries.map(([_, text], index) => ({ 
+        key: (index + 1).toString(), 
+        text: text as string 
+    }));
   } catch {
     return [];
   }
@@ -32,18 +44,18 @@ function MCQChoicesEditor({ q, onChange }: any) {
   };
 
   const addChoice = () => {
-    // 다음 알파벳 키를 생성합니다 (A, B, C...).
-    const nextKey = String.fromCharCode("A".charCodeAt(0) + choicesArray.length);
+    // 다음 숫자 키를 생성합니다 (1, 2, 3...).
+    const nextKey = (choicesArray.length + 1).toString();
     const updated = [...choicesArray, { key: nextKey, text: "" }];
     onChange({ ...q, choices: serializeChoices(updated) });
   };
 
   const removeChoice = (index: number) => {
-    // 선택지 삭제 후 키를 알파벳 순으로 재정렬합니다.
+    // 선택지 삭제 후 키를 숫자 순으로 재정렬합니다.
     const updated = choicesArray
       .filter((_, i) => i !== index)
       .map((c, idx) => ({
-        key: String.fromCharCode("A".charCodeAt(0) + idx),
+        key: (idx + 1).toString(),
         text: c.text,
       }));
     onChange({ ...q, choices: serializeChoices(updated) });
@@ -109,7 +121,7 @@ export default function QuestionItemEditor({
       </div>
 
       {/* 문제 내용 */}
-      <textarea
+      <TextareaAuto
         className="w-full border p-2 rounded"
         placeholder="문제 내용"
         value={q.text || ""}
@@ -131,7 +143,7 @@ export default function QuestionItemEditor({
 
       {/* 주관식 */}
       {q.type === "SUBJECTIVE" && (
-        <textarea
+        <TextareaAuto
           className="w-full border p-2 rounded"
           value={q.answerKeywords || ""}
           onChange={(e) => onChange({ ...q, answerKeywords: e.target.value })}
@@ -144,8 +156,8 @@ export default function QuestionItemEditor({
         <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
           <Lightbulb className="w-4 h-4 text-green-600" /> 해설/피드백
         </label>
-        <textarea
-          className="border rounded-md p-3 w-full h-16 focus:ring-green-500 focus:border-green-500 resize-y bg-green-50"
+        <TextareaAuto
+          className="border rounded-md p-3 w-full min-h-[4rem] focus:ring-green-500 focus:border-green-500 bg-green-50"
           value={q.explanation || ""}
           onChange={(e) => onChange({ ...q, explanation: e.target.value })}
           placeholder="문제 해설을 입력하세요."

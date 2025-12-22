@@ -189,6 +189,14 @@ export async function createSeries(name: string, description: string): Promise<E
   return res.data;
 }
 
+export async function updateSeries(id: number, name: string, description: string): Promise<ExamSeries> {
+  const res = await api<{ success: boolean; data: ExamSeries }>(`/api/series/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ name, description }),
+  });
+  return res.data;
+}
+
 export async function deleteSeries(id: number, force: boolean = false): Promise<void> {
   await api(`/api/series/${id}?force=${force}`, {
       method: "DELETE",

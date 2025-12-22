@@ -60,6 +60,12 @@ public class ExamController {
         return ApiResponse.ok(examService.get(id));
     }
 
+    /** 시험 정보 수정 */
+    @PutMapping("/{id}")
+    public ApiResponse<Exam> update(@PathVariable Long id, @RequestBody ExamSaveReq req) {
+        return ApiResponse.ok(examService.update(id, req));
+    }
+
     /** 시리즈별 시험 조회 */
     @GetMapping
     public ApiResponse<List<Exam>> getExamsBySeries(@RequestParam(required = false) Long seriesId) {

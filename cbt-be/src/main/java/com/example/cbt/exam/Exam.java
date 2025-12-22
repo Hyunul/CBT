@@ -34,6 +34,9 @@ public class Exam {
     @Column(nullable = false)
     private String title;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Formula("(select count(q.id) from questions q where q.exam_id = id)")
     private int questionCount;
 

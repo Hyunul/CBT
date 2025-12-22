@@ -76,7 +76,14 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
             try {
                 return Object.entries(
                     JSON.parse(item.choices) as Record<string, string>
-                ).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+                ).sort(([keyA], [keyB]) => {
+                    const numA = Number(keyA);
+                    const numB = Number(keyB);
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        return numA - numB;
+                    }
+                    return keyA.localeCompare(keyB);
+                });
             } catch (e) {
                 console.error("Choices JSON parsing error:", e);
             }

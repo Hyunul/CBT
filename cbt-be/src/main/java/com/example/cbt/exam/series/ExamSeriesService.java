@@ -56,6 +56,17 @@ public class ExamSeriesService {
         // 2. 시리즈 삭제
         examSeriesRepository.deleteById(seriesId);
     }
+
+    @Transactional
+    public ExamSeries update(Long id, String name, String description) {
+        ExamSeries series = examSeriesRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Series not found: " + id));
+        
+        series.setName(name);
+        series.setDescription(description);
+        
+        return examSeriesRepository.save(series);
+    }
     
     private void deleteExamData(Exam exam) {
         // Delete all attempts (both completed and in-progress) for this exam

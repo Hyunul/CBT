@@ -28,10 +28,15 @@ export default function QuestionCard({
   if (q.type === "MCQ" && q.choices) {
     try {
       const choicesObject: Record<string, string> = JSON.parse(q.choices);
-      // 객체를 배열로 변환하고 키(A, B, C...)를 기준으로 정렬하여 순서 보장
-      choicesArray = Object.entries(choicesObject).sort(([keyA], [keyB]) =>
-        keyA.localeCompare(keyB)
-      );
+      // 객체를 배열로 변환하고 키를 기준으로 정렬하여 순서 보장 (숫자 키 우선)
+      choicesArray = Object.entries(choicesObject).sort(([keyA], [keyB]) => {
+        const numA = Number(keyA);
+        const numB = Number(keyB);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return numA - numB;
+        }
+        return keyA.localeCompare(keyB);
+      });
     } catch (e) {
       console.error(`Question ${q.id} 선택지 JSON 파싱 오류:`, e);
     }
