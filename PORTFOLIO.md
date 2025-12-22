@@ -41,7 +41,7 @@ xychart-beta
 ```
 
 > **[벤치마크 결과 상세]**
-> 
+>
 > - **Direct DB (Sync):** 2.92 ms
 > - **Kafka (Async):** 12.20 ms (약 4.2배 오버헤드 발생)
 
@@ -88,31 +88,39 @@ GitHub Mermaid를 활용한 전체 시스템 구성도입니다. **Nginx**가 �
 
 ```mermaid
 graph TD
-    User["User / Client"]
+    User[사용자 - Web Browser]
 
-    subgraph "Docker Host (EC2)"
-        Nginx["Nginx (Reverse Proxy)"]
-
-        subgraph "Frontend Container"
-            NextJS["Next.js (SSR)"]
-        end
-
-        subgraph "Backend Container"
-            SpringBoot["Spring Boot API"]
-        end
-
-        subgraph "Data Persistence"
-            Redis[("Redis Cache<br>Ranking")]
-            MySQL[("MySQL<br>Main DB")]
-        end
+    subgraph Infrastructure [인프라 및 네트워크]
+        Nginx[Nginx - Reverse Proxy & SSL]
+        Certbot[Certbot - SSL 인증서 갱신]
     end
 
-    User --> Nginx
-    Nginx --> NextJS
-    Nginx --> SpringBoot
-    SpringBoot --> Redis
-    SpringBoot --> MySQL
-    NextJS -.-> Nginx
+    subgraph Application [애플리케이션 컨테이너]
+        FE[Next.js Frontend - Port 3000]
+        BE[Spring Boot Backend - Port 8080]
+    end
+
+    subgraph DataStore [데이터 계층]
+        MySQL[(MySQL 8.0 - Primary DB)]
+        Redis[(Redis 7 - Cache & Ranking)]
+    end
+
+    User -- "HTTPS (443) / HTTP (80)" --> Nginx
+    Nginx -- "Static & Page Req" --> FE
+    Nginx -- "API Req (/api/*)" --> BE
+
+    FE -- "SSR API Call (Internal Network)" --> BE
+
+    BE -- "JPA/Hibernate" --> MySQL
+    BE -- "Cache/Session/Ranking" --> Redis
+
+    Certbot -- "Volume Sharing" --> Nginx
+
+    style Nginx fill:#009688,stroke:#333,stroke-width:2px,color:white
+    style FE fill:#000000,stroke:#333,stroke-width:2px,color:white
+    style BE fill:#6db33f,stroke:#333,stroke-width:2px,color:white
+    style MySQL fill:#00758f,stroke:#333,stroke-width:2px,color:white
+    style Redis fill:#d82c20,stroke:#333,stroke-width:2px,color:white
 ```
 
 ### 아키텍처 특징
