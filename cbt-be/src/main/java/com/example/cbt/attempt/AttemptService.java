@@ -1,7 +1,10 @@
 package com.example.cbt.attempt;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -76,7 +79,10 @@ public class AttemptService {
         Exam exam = attempt.getExam();
         
         // ExamId로 Question 목록을 가져옴
-        List<Question> questions = questionRepository.findByExamId(exam.getId()); 
+        List<Question> questions = new ArrayList<>(questionRepository.findByExamId(exam.getId()));
+        
+        // Randomize questions deterministically based on attemptId
+        Collections.shuffle(questions, new Random(attemptId));
 
         List<AttemptDetailRes.QuestionDto> questionDtos = questions.stream()
                 .map(q -> new AttemptDetailRes.QuestionDto(
@@ -160,7 +166,11 @@ public class AttemptService {
         
         validateOwner(attempt, userId);
 
-        List<Question> questions = questionRepository.findByExamId(attempt.getExam().getId()); 
+        List<Question> questions = new ArrayList<>(questionRepository.findByExamId(attempt.getExam().getId()));
+        
+        // Randomize questions deterministically based on attemptId to match the attempt order
+        Collections.shuffle(questions, new Random(attemptId));
+
         List<Answer> answers = answerRepository.findByAttemptId(attemptId);
 
         return questions.stream().map(q -> {
