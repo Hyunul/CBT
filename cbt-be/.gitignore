@@ -36,8 +36,3 @@ out/
 ### VS Code ###
 .vscode/
 .idea/
-
-### Local/Generated ###
-portfolio_benchmark_graph.html
-seed_exams.py
-src/main/resources/1.py
