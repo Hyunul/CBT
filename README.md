@@ -1,7 +1,7 @@
 # 🚀 CBT (Computer Based Test) Platform
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Next.js](https://img.shields.io/badge/Next.js-14+-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -41,7 +41,7 @@
 *   **API Docs:** Swagger (SpringDoc)
 
 ### Frontend
-*   **Framework:** **Next.js 14+** (App Router)
+*   **Framework:** **Next.js 16** (App Router)
 *   **State:** Zustand, React Query
 *   **Styling:** Tailwind CSS, Shadcn UI
 *   **Visual:** Chart.js

@@ -3,3 +3,5 @@
 .idea/
 *.hprof
 .env
+.env.local
+*.log
