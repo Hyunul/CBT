@@ -1,3 +1,5 @@
+import { useAuth } from "@/store/useAuth";
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // Interface for common Spring Pageable response
@@ -52,64 +54,87 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers,
   });
 
+  // 401 Unauthorized handling (Token Expiration)
   if (res.status === 401) {
-      if (typeof window !== "undefined") {
-          const refreshToken = localStorage.getItem("refreshToken");
-          if (refreshToken) {
-              try {
-                  // Try to refresh the token
-                  // Also handle potential double /api for refresh endpoint
-                  let refreshPath = "/api/auth/refresh";
-                  if (API_BASE.endsWith("/api")) {
-                      refreshPath = "/auth/refresh";
-                  }
-
-                  const refreshRes = await fetch(`${API_BASE}${refreshPath}`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ refreshToken }),
-                  });
-
-                  if (refreshRes.ok) {
-                      const data = await refreshRes.json();
-                      if (data.success && data.data) {
-                          const { accessToken, refreshToken: newRefreshToken } = data.data;
-                          
-                          // Update tokens in localStorage
-                          localStorage.setItem("token", accessToken);
-                          if (newRefreshToken) {
-                              localStorage.setItem("refreshToken", newRefreshToken);
-                          }
-
-                          // Retry the original request with the new token
-                          const newHeaders = {
-                              ...headers,
-                              Authorization: `Bearer ${accessToken}`,
-                          };
-                          
-                          const retryRes = await fetch(`${API_BASE}${cleanPath}`, {
-                              ...init,
-                              headers: newHeaders,
-                          });
-                          
-                          // Return the result of the retried request
-                          if (retryRes.ok) {
-                              return retryRes.json();
-                          }
-                          // If retried request fails, continue to error handling below
-                      }
-                  }
-              } catch (refreshError) {
-                  // If refresh fails, fall through to logout
-                  console.error("Token refresh failed", refreshError);
-              }
+    if (typeof window !== "undefined") {
+      const refreshToken = localStorage.getItem("refreshToken");
+      
+      // Only attempt refresh if we have a refresh token and this wasn't already a refresh attempt
+      if (refreshToken && !path.includes("/auth/refresh")) {
+        try {
+          // Construct refresh URL correctly
+          let refreshPath = "/api/auth/refresh";
+          if (API_BASE.endsWith("/api")) {
+            refreshPath = "/auth/refresh";
+          } else if (API_BASE.endsWith("/")) {
+             refreshPath = "api/auth/refresh";
           }
 
-          // If we are here, either no refresh token, or refresh failed.
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          window.location.href = "/login";
+          const refreshRes = await fetch(`${API_BASE}${refreshPath}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (refreshRes.ok) {
+            const data = await refreshRes.json();
+            
+            // Check response structure (ApiResponse<LoginRes>)
+            if (data.success && data.data) {
+              const { accessToken, refreshToken: newRefreshToken, id, username, role } = data.data;
+
+              // 1. Update LocalStorage
+              localStorage.setItem("token", accessToken);
+              if (newRefreshToken) {
+                localStorage.setItem("refreshToken", newRefreshToken);
+              }
+              
+              // 2. Update Zustand Store
+              useAuth.getState().login(
+                accessToken,
+                newRefreshToken || refreshToken,
+                id,
+                username,
+                role
+              );
+              
+              // 3. Retry the original request with new token
+              const newHeaders = {
+                ...headers,
+                Authorization: `Bearer ${accessToken}`,
+              };
+
+              const retryRes = await fetch(`${API_BASE}${cleanPath}`, {
+                ...init,
+                headers: newHeaders,
+              });
+
+              // Return the retry result directly
+              if (retryRes.ok) {
+                 return retryRes.json();
+              }
+              
+              // If retry fails (e.g. 403 or 404), throw error based on retryRes
+              // Fall through to error handling below logic
+               const retryErrorJson = await retryRes.json().catch(() => ({}));
+               throw new Error(retryErrorJson.message || "Retried request failed");
+            }
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+        }
       }
+
+      // If refresh failed or no refresh token, logout
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("username");
+      localStorage.removeItem("role");
+      window.location.href = "/login";
+      // Return null or throw to stop execution
+      throw new Error("Session expired. Please login again.");
+    }
   }
 
   if (!res.ok) {
