@@ -1,86 +1,111 @@
-# 🚀 OptiCBT (Computer Based Test Platform)
+# 📝 CBT Platform (Computer Based Testing)
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Redis](https://img.shields.io/badge/Redis-Enabled-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-
-**"최소한의 리소스로 최대한의 성능을."**  
-데이터 기반의 의사결정과 아키텍처 최적화(Anti-Overengineering)에 집중한 고성능 온라인 시험 플랫폼입니다.
-
----
-
-## 🌟 Key Technical Features
-
-### 1. 실시간 랭킹 및 성능 최적화 (Redis)
-*   **High Performance:** RDB의 `ORDER BY` 부하를 방지하기 위해 **Redis Sorted Set**을 도입, **O(log N)**의 시간 복잡도로 수만 명의 실시간 순위를 즉각 산정합니다.
-*   **Efficient Caching:** 빈번한 시험 메타데이터 조회를 Redis에 캐싱하여 DB I/O를 획기적으로 줄였습니다.
-
-### 2. 강화된 보안 및 인증 아키텍처 (JWT & Redis)
-*   **RTR (Refresh Token Rotation):** 토큰 재발급 시마다 Refresh Token을 새롭게 갱신하여, 토큰 탈취 시나리오에 대비한 강력한 보안을 구축했습니다.
-*   **Redis-based Logout:** 로그아웃 즉시 Redis에 저장된 Refresh Token을 삭제하여, 세션을 즉각 무효화(Invalidation) 처리합니다.
-*   **Stateless with Control:** 기본적으로 Stateless한 JWT를 사용하되, Redis를 통해 서버의 제어권(Control)을 확보한 하이브리드 인증 방식을 채택했습니다.
-
-### 3. 고효율 데이터 모델링 및 정합성 (JPA)
-*   **Query Optimization:** `Fetch Join`과 `@EntityGraph`를 활용하여 JPA의 N+1 문제를 해결, 복잡한 시험 데이터를 단 1회의 쿼리로 조회합니다.
-*   **Atomic Grading:** 트랜잭션 관리를 통해 채점, 점수 반영, 랭킹 갱신이 원자적(Atomic)으로 수행되도록 설계하여 데이터 무결성을 보장합니다.
-
-### 4. 인프라 자동화 (Docker & CI/CD)
-*   **Containerization:** MySQL, Redis, App, Nginx를 **Docker Compose**로 오케스트레이션하여 개발과 운영 환경의 일치성을 확보했습니다.
-*   **Reverse Proxy:** Nginx를 활용한 리버스 프록시 설정으로 내부 보안을 강화했습니다.
+대규모 트래픽 처리를 고려하여 설계된 **온라인 시험 및 자동 채점 플랫폼**입니다.  
+Spring Boot와 Next.js로 구축되었으며, **Kafka를 활용한 비동기 랭킹 처리**를 통해 시험 종료 직전 발생하는 대량의 트래픽(Traffic Burst)을 안정적으로 처리하는 데 초점을 맞췄습니다.
 
 ---
 
 ## 🛠 Tech Stack
 
-### Backend
-*   **Core:** Java 17, Spring Boot 3.x
-*   **Persistence:** JPA (Hibernate), MySQL 8.0
-*   **Cache/Store:** **Redis**
-*   **Security:** Spring Security, JWT
-*   **API Docs:** Swagger (SpringDoc)
+| Category | Technology |
+| --- | --- |
+| **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS |
+| **Backend** | Spring Boot 3.x, Java 17, Spring Security (JWT) |
+| **Database** | MySQL 8.0, JPA (Hibernate) |
+| **Cache & Store** | Redis (Ranking, Session), MySQL (Persistent Data) |
+| **Message Queue** | Apache Kafka, Zookeeper (비동기 채점/랭킹 처리) |
+| **DevOps** | Docker, Docker Compose, Nginx, GitHub Actions |
+| **Testing** | k6 (Load Testing), JUnit 5 |
 
-### Frontend
-*   **Framework:** **Next.js 16** (App Router)
-*   **State:** Zustand, React Query
-*   **Styling:** Tailwind CSS, Shadcn UI
-*   **Visual:** Chart.js
+---
+
+## 🚀 Getting Started
+
+이 프로젝트는 **로컬 개발 환경(Local)**과 **운영 환경(Production)**을 위한 Docker 설정이 분리되어 있습니다.
+
+### 1. 사전 준비 (Prerequisites)
+*   [Docker](https://www.docker.com/) & Docker Compose 설치
+*   (선택) Java 17, Node.js 18+ (소스 코드 직접 실행 시)
+
+### 2. 간편 실행 (Docker Compose) - 추천
+
+백엔드, 프론트엔드, DB, Redis, Kafka를 한 번에 실행합니다.
+
+**로컬 개발 모드 (Local Development)**
+*   DB, Redis, Kafka 포트가 호스트에 노출되어 디버깅이 용이합니다.
+*   Frontend: `http://localhost:3000`
+*   Backend: `http://localhost:8080`
+
+```bash
+# 실행
+docker-compose -f docker-compose.local.yml up -d --build
+
+# 종료
+docker-compose -f docker-compose.local.yml down
+```
+
+**운영 모드 (Production)**
+*   Nginx가 앞단에 붙어 SSL(HTTPS) 및 리버스 프록시를 처리합니다.
+*   Certbot을 통한 SSL 자동 갱신이 포함되어 있습니다.
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+---
+
+## ⚙️ Configuration & Ports
+
+| Service | Port (Local) | Description |
+| --- | --- | --- |
+| **Frontend** | `3000` | Next.js Web Client |
+| **Backend** | `8080` | Spring Boot API Server |
+| **MySQL** | `3307` (Internal: 3306) | Main Database (`cbt_platform`) |
+| **Redis** | `6379` | Cache & Ranking ZSet |
+| **Kafka** | `9093` (Internal: 9092) | Event Streaming |
+
+### 환경 변수 설정
+`docker-compose.local.yml` 내부 `environment` 섹션에서 주요 설정을 변경할 수 있습니다.
+
+*   `SPRING_DATASOURCE_PASSWORD`: DB 비밀번호 (기본값: `root_password` 또는 `1234`)
+*   `APP_FEATURE_RANKING_ASYNC`: 랭킹 처리 방식 토글 (`true`: Kafka 비동기, `false`: Redis 동기)
+
+---
+
+## 🧪 Performance & Load Testing (Kafka 도입 검증)
+
+이 프로젝트는 **"동시 접속자가 몇 명일 때 Kafka가 필요한가?"** 를 증명하기 위한 부하 테스트 시나리오를 포함합니다.
+
+### 랭킹 처리 아키텍처 비교
+1.  **Sync (동기 방식)**: 시험 제출 즉시 Redis에 점수 업데이트 (`APP_FEATURE_RANKING_ASYNC=false`)
+2.  **Async (비동기 방식)**: Kafka에 이벤트를 발행하고 즉시 응답, 컨슈머가 백그라운드 처리 (`APP_FEATURE_RANKING_ASYNC=true`)
+
+### 부하 테스트 실행 (k6)
+k6를 사용하여 가상 유저(VU) 300명이 동시에 시험을 제출하는 상황을 시뮬레이션합니다.
+
+```bash
+# 1. 테스트 스크립트가 있는 폴더로 이동 (또는 Docker 볼륨 마운트 사용)
+# Docker를 이용한 실행 예시:
+docker run --rm -i \
+  -v ${PWD}/tests/k6:/scripts \
+  grafana/k6 run /scripts/load_test.js
+```
 
 ---
 
 ## 📂 Project Structure
 
-```bash
+```
 CBT/
-├── cbt-be/               # Spring Boot Backend
-│   └── src/main/java/com/example/cbt/
-│       ├── attempt/      # 응시 및 채점 로직 (Grading Service)
-│       ├── auth/         # JWT 기반 인증 및 보안 설정
-│       ├── exam/         # 시험 및 문항 관리
-│       ├── ranking/      # Redis 기반 실시간 랭킹 서비스
-│       └── common/aop/   # 공통 로깅 및 관심사 분리(AOP)
-├── cbt-fe/               # Next.js Frontend (TypeScript)
-└── nginx/                # Reverse Proxy Configuration
+├── cbt-be/              # Spring Boot Backend
+│   └── src/main/java/   # API, Domain Logic, Event Listeners
+├── cbt-fe/              # Next.js Frontend
+│   └── app/             # App Router Pages
+├── nginx/               # Nginx Configuration (Prod/Local)
+├── tests/k6/            # Load Testing Scripts
+├── docker-compose.local.yml  # Local Dev Setup
+└── docker-compose.prod.yml   # Production Setup
 ```
 
----
-
-## ⚡ Getting Started
-
-### Prerequisites
-*   Docker & Docker Compose
-
-### Fast Run (Docker Compose)
-모든 환경(DB, Redis, BE, FE)을 한 번에 실행합니다.
-```bash
-docker-compose up -d --build
-```
-*   **Frontend:** `http://localhost:3000`
-*   **Backend API:** `http://localhost:8080`
-*   **API Documentation:** `http://localhost:8080/swagger-ui/index.html`
-
----
-
-## 📊 Architecture Decision
-본 프로젝트는 무분별한 기술 도입보다 **데이터 기반의 의사결정**을 지향합니다.  
-Kafka 도입과 직접 DB 접근 방식에 대한 레이턴시 벤치마크 결과는 [PORTFOLIO.md](./PORTFOLIO.md)에서 확인할 수 있습니다.
+## 🛡 License
+This project is for educational and portfolio purposes.

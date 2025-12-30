@@ -59,6 +59,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JAVA_OPTS: "-Xms512m -Xmx1024m"
       CORS_ALLOWED_ORIGINS: "*"
+      APP_FEATURE_RANKING_ASYNC: "true" # Sync Test
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

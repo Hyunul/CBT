@@ -1,0 +1,219 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "1. Signup & Login": {
+                "path": "::1. Signup & Login",
+                "id": "c1e2fa7a7b906a098b05d977fbe8679e",
+                "groups": {},
+                "checks": {
+                        "signup status is 200 or 201": {
+                            "name": "signup status is 200 or 201",
+                            "path": "::1. Signup & Login::signup status is 200 or 201",
+                            "id": "9e73ae5decf184b628a2ec957b3b8016",
+                            "passes": 5264,
+                            "fails": 0
+                        },
+                        "login status is 200": {
+                            "fails": 0,
+                            "name": "login status is 200",
+                            "path": "::1. Signup & Login::login status is 200",
+                            "id": "b3600f413c4dd0320c100dc8a76bb30d",
+                            "passes": 5264
+                        },
+                        "has token": {
+                            "name": "has token",
+                            "path": "::1. Signup & Login::has token",
+                            "id": "26f62a943e71a7c7b0bf84c98b50923b",
+                            "passes": 5264,
+                            "fails": 0
+                        }
+                    },
+                "name": "1. Signup & Login"
+            },
+            "2. Get Exam List": {
+                "path": "::2. Get Exam List",
+                "id": "17c5e2b6c69c6113471d1cafd0e33ee7",
+                "groups": {},
+                "checks": {
+                        "get exams status is 200": {
+                            "passes": 5264,
+                            "fails": 0,
+                            "name": "get exams status is 200",
+                            "path": "::2. Get Exam List::get exams status is 200",
+                            "id": "7421e8938ad481b5637c42d69171e367"
+                        }
+                    },
+                "name": "2. Get Exam List"
+            },
+            "3. Start Exam": {
+                "name": "3. Start Exam",
+                "path": "::3. Start Exam",
+                "id": "dc96a5a9ce1cb4888023b0a6d60d4d05",
+                "groups": {},
+                "checks": {
+                        "start attempt status is 200": {
+                            "passes": 5264,
+                            "fails": 0,
+                            "name": "start attempt status is 200",
+                            "path": "::3. Start Exam::start attempt status is 200",
+                            "id": "4e11225a48835d88aab654ebc5d4baa8"
+                        },
+                        "has attemptId": {
+                            "passes": 5264,
+                            "fails": 0,
+                            "name": "has attemptId",
+                            "path": "::3. Start Exam::has attemptId",
+                            "id": "df2cef2906b67e1f605e2832839e5e39"
+                        }
+                    }
+            },
+            "4. Submit Exam (Ranking Update Trigger)": {
+                "name": "4. Submit Exam (Ranking Update Trigger)",
+                "path": "::4. Submit Exam (Ranking Update Trigger)",
+                "id": "81d3b113160785e91de84a15e2da401e",
+                "groups": {},
+                "checks": {
+                        "submit status is 200": {
+                            "passes": 5264,
+                            "fails": 0,
+                            "name": "submit status is 200",
+                            "path": "::4. Submit Exam (Ranking Update Trigger)::submit status is 200",
+                            "id": "6177ce97cde15ebc662b02ec7b5d97be"
+                        },
+                        "score returned": {
+                            "name": "score returned",
+                            "path": "::4. Submit Exam (Ranking Update Trigger)::score returned",
+                            "id": "8e1cd063034c69e45e6451fe669ae7d1",
+                            "passes": 5264,
+                            "fails": 0
+                        }
+                    }
+            }
+        },
+        "checks": {}
+    },
+    "metrics": {
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0
+        },
+        "vus_max": {
+            "max": 300,
+            "value": 300,
+            "min": 300
+        },
+        "iteration_duration": {
+            "avg": 3810.7201522739433,
+            "min": 2140.14915,
+            "med": 3738.39165,
+            "max": 7138.04049,
+            "p(90)": 5132.899683,
+            "p(95)": 5445.099472499999
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 26320,
+            "value": 0
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.03203089741641334,
+            "min": 0,
+            "med": 0,
+            "max": 105.13098
+        },
+        "data_sent": {
+            "count": 7514852,
+            "rate": 44386.19903725579
+        },
+        "http_req_duration{expected_response:true}": {
+            "med": 81.721845,
+            "max": 7940.215252,
+            "p(90)": 428.02772400000003,
+            "p(95)": 593.1185714999998,
+            "avg": 184.3345336371216,
+            "min": 0.072
+        },
+        "checks": {
+            "passes": 42112,
+            "fails": 0,
+            "value": 1
+        },
+        "data_received": {
+            "count": 23476493,
+            "rate": 138663.04898549462
+        },
+        "http_req_waiting": {
+            "med": 81.37179,
+            "max": 7939.768402,
+            "p(90)": 427.6196910000001,
+            "p(95)": 592.2863504999996,
+            "avg": 183.7367299033045,
+            "min": 0
+        },
+        "vus": {
+            "value": 2,
+            "min": 2,
+            "max": 300
+        },
+        "http_req_duration": {
+            "avg": 184.3345336371216,
+            "min": 0.072,
+            "med": 81.721845,
+            "max": 7940.215252,
+            "p(90)": 428.02772400000003,
+            "p(95)": 593.1185714999998,
+            "thresholds": {
+                "p(95)<2000": false
+            }
+        },
+        "http_req_blocked": {
+            "med": 0.00495,
+            "max": 105.18984,
+            "p(90)": 0.00891,
+            "p(95)": 0.01539,
+            "avg": 0.039898237841952996,
+            "min": 0.00153
+        },
+        "iterations": {
+            "count": 5264,
+            "rate": 31.091623857943507
+        },
+        "http_req_sending": {
+            "avg": 0.029850825227972028,
+            "min": 0.00594,
+            "med": 0.02223,
+            "max": 15.4359,
+            "p(90)": 0.04383,
+            "p(95)": 0.059404499999999937
+        },
+        "group_duration": {
+            "avg": 203.4299959835685,
+            "min": 6.0498,
+            "med": 122.4405,
+            "max": 1624.5261,
+            "p(90)": 554.211585,
+            "p(95)": 719.9010450000001
+        },
+        "http_req_receiving": {
+            "avg": 0.5679529085866245,
+            "min": 0.02142,
+            "med": 0.190125,
+            "max": 7727.915504,
+            "p(90)": 0.48042,
+            "p(95)": 0.6743024999999997
+        },
+        "http_reqs": {
+            "rate": 155.45811928971753,
+            "count": 26320
+        }
+    }
+}
