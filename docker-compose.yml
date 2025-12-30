@@ -32,7 +32,7 @@ services:
     image: mysql:8.0
     container_name: cbt-mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       MYSQL_DATABASE: cbt_platform
       MYSQL_USER: cbt_user
@@ -58,15 +58,43 @@ services:
       - redis_data:/data
     restart: always
 
-  # 3. Spring Boot Backend Application
+  # 3. Kafka & Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: cbt-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: always
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: cbt-kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    restart: always
+
+  # 4. Spring Boot Backend Application
   backend:
     build:
       context: ./cbt-be
       dockerfile: Dockerfile
-    image: ${DOCKER_USERNAME}/cbt-backend:latest
+    image: cbt-backend:latest
     container_name: cbt-backend
-    # ports:
-    #   - "8080:8080"  # Accessed via Nginx
+    ports:
+      - "8080:8080"  # Accessed via Nginx or Direct
     environment:
       # DB 설정
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
@@ -74,6 +102,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: root_password
       # Redis 설정
       SPRING_DATA_REDIS_HOST: redis
+      # Kafka 설정
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       # JVM 메모리 설정 (t3.small 2GB 기준: 최대 1GB 할당)
       JAVA_OPTS: "-Xms512m -Xmx1024m"
       # CORS 설정 (모든 Origin 허용)
@@ -83,11 +113,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      kafka:
+        condition: service_started
     restart: always
 
-  # 4. Next.js Frontend Application
+  # 5. Next.js Frontend Application
   frontend:
-    image: ${DOCKER_USERNAME}/cbt-frontend:latest
+    image: cbt-frontend:latest
     container_name: cbt-frontend
     # ports:
     #   - "3000:3000"  # Accessed via Nginx

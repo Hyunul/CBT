@@ -8,7 +8,23 @@ spring:
     data:
         redis:
             timeout: 60000
+    kafka:
+        bootstrap-servers: localhost:9093 # Default for local dev
+        consumer:
+            group-id: cbt-group
+            auto-offset-reset: earliest
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            properties:
+                spring.json.trusted.packages: "*"
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 jwt:
     secret: ${JWT_SECRET:mysecretkey123456789012345678901234}
     expiration: 43200000
     refresh-expiration: 604800000 # 7 days
+
+app:
+    feature:
+        ranking-async: false # true=Kafka, false=Sync

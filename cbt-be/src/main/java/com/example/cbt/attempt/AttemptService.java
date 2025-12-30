@@ -42,6 +42,8 @@ public class AttemptService {
     private final UserRepository userRepository;
     private final GradingService gradingService;
     private final SubmissionRankingService submissionRankingService;
+    private final org.springframework.kafka.core.KafkaTemplate<String, com.example.cbt.event.ExamSubmittedEvent> kafkaTemplate;
+    private final org.springframework.core.env.Environment env;
 
     /**
      * 1) Attempt 생성 (시험 시작)
@@ -130,11 +132,26 @@ public class AttemptService {
         answerRepository.saveAll(gradedAnswers);
         attemptRepository.save(attempt);
 
-        // If the user is not a guest, update ranking directly (Synchronous)
+        // Check feature flag for Async Ranking (Default: true)
+        boolean isRankingAsync = env.getProperty("app.feature.ranking-async", Boolean.class, true);
+
         if (attempt.getUser() != null) {
-            submissionRankingService.updateExamRanking(attempt.getExam().getId(), attempt.getUser().getId(), (double) totalScore);
-            submissionRankingService.increaseSubmission(attempt.getUser().getId());
-            log.info("Updated ranking synchronously for user {}", attempt.getUser().getId());
+            if (isRankingAsync) {
+                // Option A: Kafka (Asynchronous)
+                com.example.cbt.event.ExamSubmittedEvent event = new com.example.cbt.event.ExamSubmittedEvent(
+                    attempt.getId(),
+                    attempt.getExam().getId(),
+                    attempt.getUser().getId(),
+                    (double) totalScore
+                );
+                kafkaTemplate.send("exam-submitted", event);
+                log.info("Async: Published ExamSubmittedEvent to Kafka for attemptId={}", attempt.getId());
+            } else {
+                // Option B: Redis Direct (Synchronous)
+                submissionRankingService.updateExamRanking(attempt.getExam().getId(), attempt.getUser().getId(), (double) totalScore);
+                submissionRankingService.increaseSubmission(attempt.getUser().getId());
+                log.info("Sync: Updated ranking synchronously for userId={}", attempt.getUser().getId());
+            }
         }
 
         return new AttemptSubmitRes(
