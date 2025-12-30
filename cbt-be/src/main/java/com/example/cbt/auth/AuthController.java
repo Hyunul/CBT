@@ -1,5 +1,7 @@
 package com.example.cbt.auth;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,10 +16,6 @@ import com.example.cbt.user.User;
 import com.example.cbt.user.UserService;
 
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.http.ResponseEntity;
-
-// ... imports
 
 @RestController
 @RequestMapping("/api/auth")
@@ -44,5 +42,13 @@ public class AuthController {
     @PostMapping("/refresh")
     public ApiResponse<LoginRes> refresh(@RequestBody RefreshTokenReq req) {
         return ApiResponse.ok(authService.refreshToken(req.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<String> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails != null) {
+            authService.logout(userDetails.getUserId());
+        }
+        return ApiResponse.ok("로그아웃 되었습니다.");
     }
 }

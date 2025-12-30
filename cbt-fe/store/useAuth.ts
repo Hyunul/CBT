@@ -41,24 +41,41 @@ export const useAuth = create<AuthStore>((set) => ({
     },
 
     // 로그아웃 처리
-    logout: () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken"); // Added
-        localStorage.removeItem("userId");
-        localStorage.removeItem("username");
-        localStorage.removeItem("role");
+    logout: async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (token) {
+                const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+                // Handle potentially missing /api in URL or double slashes, but keep it simple for now as per project convention
+                await fetch(`${API_BASE}/api/auth/logout`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Logout API call failed:", error);
+        } finally {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken"); // Added
+            localStorage.removeItem("userId");
+            localStorage.removeItem("username");
+            localStorage.removeItem("role");
 
-        set({
-            token: null,
-            refreshToken: null, // Added
-            userId: null,
-            username: null,
-            role: null,
-            isLoaded: true,
-        });
+            set({
+                token: null,
+                refreshToken: null, // Added
+                userId: null,
+                username: null,
+                role: null,
+                isLoaded: true,
+            });
 
-        // 로그아웃 후 메인 페이지 이동
-        window.location.href = "/";
+            // 로그아웃 후 메인 페이지 이동
+            window.location.href = "/";
+        }
     },
 }));
 

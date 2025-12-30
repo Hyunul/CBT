@@ -66,12 +66,22 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        // 4. Generate new Access Token
+        // 4. Generate new Access Token & Refresh Token (RTR)
         String newAccessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getId());
 
-        // For this implementation, we reuse the existing refresh token. 
-        // We could also rotate it here if desired.
+        // 5. Update Redis with new Refresh Token (Rotate)
+        redisTemplate.opsForValue().set(
+                "RT:" + userId,
+                newRefreshToken,
+                refreshExpiration,
+                TimeUnit.MILLISECONDS
+        );
         
-        return new LoginRes(newAccessToken, refreshToken, user.getId(), user.getUsername(), user.getRole().name());
+        return new LoginRes(newAccessToken, newRefreshToken, user.getId(), user.getUsername(), user.getRole().name());
+    }
+
+    public void logout(Long userId) {
+        redisTemplate.delete("RT:" + userId);
     }
 }
