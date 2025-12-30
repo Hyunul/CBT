@@ -144,7 +144,7 @@ export default function () {
     const res = http.post(`${BASE_URL}/api/attempts/${attemptId}/submit`, null, authParams);
     check(res, {
       'submit status is 200': (r) => r.status === 200,
-      'score returned': (r) => r.json('data.totalScore') !== undefined,
+      'score returned': (r) => r.json('totalScore') !== undefined,
     });
   });
   

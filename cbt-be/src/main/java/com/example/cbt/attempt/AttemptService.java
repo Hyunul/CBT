@@ -26,6 +26,10 @@ import com.example.cbt.question.QuestionRepository; // QuestionRepository 임포
 import com.example.cbt.question.QuestionType; // QuestionType 임포트 가정
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
+import com.example.cbt.event.ExamSubmittedEvent;
+
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.core.env.Environment;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,8 +46,8 @@ public class AttemptService {
     private final UserRepository userRepository;
     private final GradingService gradingService;
     private final SubmissionRankingService submissionRankingService;
-    private final org.springframework.kafka.core.KafkaTemplate<String, com.example.cbt.event.ExamSubmittedEvent> kafkaTemplate;
-    private final org.springframework.core.env.Environment env;
+    private final KafkaTemplate<String, ExamSubmittedEvent> kafkaTemplate;
+    private final Environment env;
 
     /**
      * 1) Attempt 생성 (시험 시작)
@@ -138,7 +142,7 @@ public class AttemptService {
         if (attempt.getUser() != null) {
             if (isRankingAsync) {
                 // Option A: Kafka (Asynchronous)
-                com.example.cbt.event.ExamSubmittedEvent event = new com.example.cbt.event.ExamSubmittedEvent(
+                ExamSubmittedEvent event = new ExamSubmittedEvent(
                     attempt.getId(),
                     attempt.getExam().getId(),
                     attempt.getUser().getId(),
