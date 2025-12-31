@@ -5,11 +5,11 @@ import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 export const options = {
   // 스트레스 테스트 설정 (Step Stress)
   stages: [
-    { duration: '30s', target: 50 },   // 1단계: 50명 (워밍업)
-    { duration: '30s', target: 100 },  // 2단계: 100명
-    { duration: '30s', target: 200 },  // 3단계: 200명
-    { duration: '30s', target: 300 },  // 4단계: 300명 (한계 도전)
-    { duration: '30s', target: 0 },    // 종료
+    { duration: '30s', target: 100 },   // 1단계: 100명 (Warm-up)
+    { duration: '30s', target: 500 },   // 2단계: 500명 (Load)
+    { duration: '30s', target: 1000 },  // 3단계: 1000명 (Stress)
+    { duration: '30s', target: 1500 },  // 4단계: 1500명 (Spike/Breakpoint)
+    { duration: '30s', target: 0 },     // 종료
   ],
   thresholds: {
     http_req_duration: ['p(95)<2000'], // 2초 넘어가면 실패로 간주

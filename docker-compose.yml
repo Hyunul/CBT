@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  # 1. Redis Cache & Ranking Store
+  redis:
+    image: redis:7-alpine
+    container_name: cbt-redis-local
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data_local:/data
+    restart: always
+
+  # 2. Kafka & Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: cbt-zookeeper-local
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: always
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: cbt-kafka-local
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Localhost for host access, kafka for internal access
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    restart: always
+
+  # 3. Spring Boot Backend Application
+  backend:
+    build:
+      context: ./cbt-be
+      dockerfile: Dockerfile
+    image: cbt-backend:local
+    container_name: cbt-backend-local
+    ports:
+      - "8080:8080"
+    environment:
+      # 로컬 MySQL 접속 설정 (host.docker.internal 사용)
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+      CORS_ALLOWED_ORIGINS: "*"
+      APP_FEATURE_RANKING_ASYNC: "true" # Sync Test
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: always
+
+  # 4. Next.js Frontend Application
+  frontend:
+    image: cbt-frontend:local
+    container_name: cbt-frontend-local
+    build:
+      context: ./cbt-fe
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+      INTERNAL_API_URL: http://backend:8080
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  redis_data_local:
