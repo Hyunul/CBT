@@ -1,50 +1,89 @@
-# 🚀 OptiCBT (Computer Based Test Platform)
+# 🚀 OptiCBT (High-Performance Online Exam Platform)
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Redis](https://img.shields.io/badge/Redis-Enabled-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![Redis](https://img.shields.io/badge/Redis-7.x-DC382D?logo=redis&logoColor=white)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-**"최소한의 리소스로 최대한의 성능을."**  
-데이터 기반의 의사결정과 아키텍처 최적화(Anti-Overengineering)에 집중한 고성능 온라인 시험 플랫폼입니다.
+**OptiCBT**는 대규모 동시 접속 상황에서도 안정적인 시험 응시와 실시간 랭킹 산정을 보장하는 **고성능 온라인 CBT(Computer Based Testing) 플랫폼**입니다.  
+**"Anti-Overengineering & Data-Driven Decision"** 철학을 바탕으로, 불필요한 복잡성을 배제하고 실제 성능 데이터에 기반하여 최적의 아키텍처를 설계했습니다.
 
 ---
 
-## 🌟 Key Technical Features
+## 🏛 Service Architecture
 
-### 1. 실시간 랭킹 및 성능 최적화 (Redis)
-*   **High Performance:** RDB의 `ORDER BY` 부하를 방지하기 위해 **Redis Sorted Set**을 도입, **O(log N)**의 시간 복잡도로 수만 명의 실시간 순위를 즉각 산정합니다.
-*   **Efficient Caching:** 빈번한 시험 메타데이터 조회를 Redis에 캐싱하여 DB I/O를 획기적으로 줄였습니다.
+![Service Architecture](docs/images/service-architecture.png)
 
-### 2. 강화된 보안 및 인증 아키텍처 (JWT & Redis)
-*   **RTR (Refresh Token Rotation):** 토큰 재발급 시마다 Refresh Token을 새롭게 갱신하여, 토큰 탈취 시나리오에 대비한 강력한 보안을 구축했습니다.
-*   **Redis-based Logout:** 로그아웃 즉시 Redis에 저장된 Refresh Token을 삭제하여, 세션을 즉각 무효화(Invalidation) 처리합니다.
-*   **Stateless with Control:** 기본적으로 Stateless한 JWT를 사용하되, Redis를 통해 서버의 제어권(Control)을 확보한 하이브리드 인증 방식을 채택했습니다.
+시스템은 **MSA(Microservices Architecture)를 지향하는 모듈형 모놀리스(Modular Monolith)** 구조로 설계되었으며, Docker Compose를 통해 전체 인프라가 오케스트레이션됩니다.
 
-### 3. 고효율 데이터 모델링 및 정합성 (JPA)
-*   **Query Optimization:** `Fetch Join`과 `@EntityGraph`를 활용하여 JPA의 N+1 문제를 해결, 복잡한 시험 데이터를 단 1회의 쿼리로 조회합니다.
-*   **Atomic Grading:** 트랜잭션 관리를 통해 채점, 점수 반영, 랭킹 갱신이 원자적(Atomic)으로 수행되도록 설계하여 데이터 무결성을 보장합니다.
+*   **User Interface**: Next.js (App Router) 기반의 SPA로, 빠른 초기 로딩과 SEO를 동시에 만족합니다.
+*   **API Server**: Spring Boot 3.x 기반의 RESTful API 서버입니다.
+*   **Data Layer**:
+    *   **MySQL 8.0**: 사용자 정보, 시험 문제, 응시 이력 등 영구 데이터 저장.
+    *   **Redis 7.x**: 실시간 랭킹 산정(Sorted Set) 및 세션/토큰 관리(Cache).
+*   **Gateway**: Nginx를 리버스 프록시로 사용하여 SSL Termination 및 정적 리소스 서빙을 담당합니다.
 
-### 4. 인프라 자동화 (Docker & CI/CD)
-*   **Containerization:** MySQL, Redis, App, Nginx를 **Docker Compose**로 오케스트레이션하여 개발과 운영 환경의 일치성을 확보했습니다.
-*   **Reverse Proxy:** Nginx를 활용한 리버스 프록시 설정으로 내부 보안을 강화했습니다.
+---
+
+## 💡 Key Technical Features
+
+### 1. 실시간 랭킹 시스템 (Redis Sorted Set)
+*   **Challenge**: 수만 명의 응시자가 동시에 시험을 종료할 때, RDB(`ORDER BY`)로 랭킹을 계산하면 DB 부하가 급증하여 데드락이나 타임아웃이 발생할 수 있습니다.
+*   **Solution**: **Redis Sorted Set (ZSet)** 자료구조를 도입했습니다.
+    *   점수 업데이트 및 순위 조회가 **O(log N)**의 시간 복잡도로 수행됩니다.
+    *   `SubmissionRankingService`를 통해 시험 종료 즉시 메모리 상에서 순위가 갱신됩니다.
+
+### 2. 고성능 보안 인증 (JWT + RTR)
+*   **Strategy**: Stateless한 **JWT(Access Token)**와 Stateful한 **Refresh Token**을 결합한 하이브리드 방식입니다.
+*   **RTR (Refresh Token Rotation)**: Access Token 재발급 시 Refresh Token도 함께 교체하여, 토큰 탈취 시 피해를 최소화하는 **RTR 전략**을 구현했습니다.
+*   **Logout Handling**: 로그아웃 시 남은 Access Token 유효시간 동안 Redis Blacklist에 등록하여 접근을 원천 차단합니다.
+
+### 3. 데이터 무결성 및 최적화
+*   **Atomic Grading**: 답안 제출, 자동 채점, 점수 저장, 랭킹 반영의 전 과정이 **@Transactional** 안에서 원자적(Atomic)으로 수행되어 데이터 불일치를 방지합니다.
+*   **JPA Optimization**: 복잡한 시험지-문항-보기 데이터 조회 시 `@EntityGraph`와 `Batch Fetching`을 적용하여 **N+1 문제**를 해결했습니다.
+
+---
+
+## ⚖️ Architectural Decision: Direct Redis vs Kafka
+
+프로젝트 초기, 트래픽 폭주(Spike) 대응을 위해 **Kafka 비동기 처리** 도입을 고려했으나, 실제 부하 테스트 결과를 바탕으로 **Direct Redis(Sync)** 방식을 채택했습니다.
+
+### 🧪 Benchmark Report (1500 VUs Step Stress)
+**테스트 환경**: Docker Compose (Local), 1500 Concurrent Users
+
+![Performance Report](docs/images/report.png)
+
+| Metric | Sync (Direct Redis) | Async (Kafka) | Analysis |
+| :--- | :--- | :--- | :--- |
+| **Stability** | **Stable (0% Error)** | Stable (0.1% Error) | Redis 직접 쓰기 방식도 1500 VU 부하를 에러 없이 처리했습니다. |
+| **P95 Latency** | 7,116 ms | **6,339 ms** | Kafka 도입 시 약 **11% (0.8초)**의 성능 개선이 있었습니다. |
+| **Complexity** | Low | **High** | Kafka/Zookeeper 운영 비용 및 메모리 오버헤드가 큽니다. |
+
+**결론**: 11%의 성능 향상을 위해 Kafka의 높은 운영 비용을 지불하는 것은 **Over-engineering**이라고 판단했습니다. 따라서 초기 모델은 **Direct Redis** 아키텍처로 구축하여 개발 생산성과 운영 효율성을 확보했습니다.
 
 ---
 
 ## 🛠 Tech Stack
 
 ### Backend
-*   **Core:** Java 17, Spring Boot 3.x
-*   **Persistence:** JPA (Hibernate), MySQL 8.0
-*   **Cache/Store:** **Redis**
-*   **Security:** Spring Security, JWT
-*   **API Docs:** Swagger (SpringDoc)
+*   **Framework**: Spring Boot 3.5.7
+*   **Language**: Java 17
+*   **Data**: Spring Data JPA, QueryDSL
+*   **Security**: Spring Security, JJWT
+*   **Test**: JUnit 5, Mockito
 
 ### Frontend
-*   **Framework:** **Next.js 16** (App Router)
-*   **State:** Zustand, React Query
-*   **Styling:** Tailwind CSS, Shadcn UI
-*   **Visual:** Chart.js
+*   **Framework**: Next.js 15 (App Router)
+*   **Language**: TypeScript
+*   **Styling**: Tailwind CSS
+*   **State**: Zustand, React Query
+*   **HTTP**: Axios
+
+### Infrastructure
+*   **DB**: MySQL 8.0
+*   **Cache**: Redis 7.0
+*   **DevOps**: Docker, Docker Compose
+*   **Load Testing**: k6
 
 ---
 
@@ -52,15 +91,20 @@
 
 ```bash
 CBT/
-├── cbt-be/               # Spring Boot Backend
+├── cbt-be/                 # Backend (Spring Boot)
 │   └── src/main/java/com/example/cbt/
-│       ├── attempt/      # 응시 및 채점 로직 (Grading Service)
-│       ├── auth/         # JWT 기반 인증 및 보안 설정
-│       ├── exam/         # 시험 및 문항 관리
-│       ├── ranking/      # Redis 기반 실시간 랭킹 서비스
-│       └── common/aop/   # 공통 로깅 및 관심사 분리(AOP)
-├── cbt-fe/               # Next.js Frontend (TypeScript)
-└── nginx/                # Reverse Proxy Configuration
+│       ├── attempt/        # 응시 및 채점 도메인
+│       ├── auth/           # 인증/인가 (JWT)
+│       ├── exam/           # 시험 관리 도메인
+│       ├── ranking/        # 랭킹 서비스 (Redis)
+│       └── grading/        # 자동 채점 로직
+├── cbt-fe/                 # Frontend (Next.js)
+│   └── app/                # App Router Pages
+│       ├── admin/          # 관리자 페이지
+│       ├── exam/           # 시험 응시 페이지
+│       └── ranking/        # 랭킹 페이지
+├── docker-compose.local.yml # 로컬 개발용 인프라 설정
+└── tests/k6/               # 부하 테스트 스크립트 및 리포트
 ```
 
 ---
@@ -70,17 +114,17 @@ CBT/
 ### Prerequisites
 *   Docker & Docker Compose
 
-### Fast Run (Docker Compose)
-모든 환경(DB, Redis, BE, FE)을 한 번에 실행합니다.
+### Run Application
+프로젝트 루트에서 다음 명령어를 실행하면 모든 서비스가 구동됩니다.
+
 ```bash
-docker-compose up -d --build
+# 실행
+docker-compose -f docker-compose.local.yml up -d --build
+
+# 종료
+docker-compose -f docker-compose.local.yml down
 ```
-*   **Frontend:** `http://localhost:3000`
-*   **Backend API:** `http://localhost:8080`
-*   **API Documentation:** `http://localhost:8080/swagger-ui/index.html`
 
----
-
-## 📊 Architecture Decision
-본 프로젝트는 무분별한 기술 도입보다 **데이터 기반의 의사결정**을 지향합니다.  
-Kafka 도입과 직접 DB 접근 방식에 대한 레이턴시 벤치마크 결과는 [PORTFOLIO.md](./PORTFOLIO.md)에서 확인할 수 있습니다.
+*   **Frontend**: [http://localhost:3000](http://localhost:3000)
+*   **Backend API**: [http://localhost:8080](http://localhost:8080)
+*   **Swagger Docs**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)

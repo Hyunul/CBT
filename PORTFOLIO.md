@@ -1,189 +1,134 @@
-# 🚀 [Project] 고성능/고효율 CBT(Computer Based Test) 플랫폼
+# 📂 Technical Deep Dive & Problem Solving Log
 
-> **"한정된 리소스(t3.small) 내에서 최대의 성능을 이끌어내기 위한 아키텍처 최적화"**  
-> Redis 기반의 실시간 랭킹 시스템과 데이터 기반의 아키텍처 의사결정(Anti-Overengineering)을 통해 **안정성과 효율성**을 모두 잡은 온라인 시험 플랫폼입니다.
-
----
-
-## 1. 프로젝트 개요 (Overview)
-
-- **개발 기간:** 2024.12 ~ 2025.01 (진행 중)
-- **참여 인원:** 백엔드 1명 (본인 - 인프라/DB 설계 포함), 프론트엔드 1명
-- **주요 기능:** 시험 응시, 자동 채점, 실시간 랭킹, 관리자 문항 관리
-- **Github Repository:** [🔗 Github 링크를 입력해주세요]
-
-### 🛠 Tech Stack
-
-| Category           | Technology                                                |
-| ------------------ | --------------------------------------------------------- |
-| **Language**       | Java 17, TypeScript                                       |
-| **Framework**      | **Spring Boot 3.x**, JPA (Hibernate), Next.js 14          |
-| **Database**       | MySQL 8.0, **Redis (Caching & Ranking)**                  |
-| **Infra & DevOps** | AWS (EC2 t3.small), Docker Compose, Nginx, GitHub Actions |
-| **Security**       | Spring Security, JWT                                      |
+> **"기술을 위한 기술이 아닌, 문제를 해결하는 적정 기술(Appropriate Technology)을 지향합니다."**  
+> 본 문서는 OptiCBT 프로젝트를 개발하며 마주한 기술적 난관, 그에 대한 해결책, 그리고 아키텍처 의사결정 과정을 기록한 엔지니어링 노트입니다.
 
 ---
 
-## 2. 핵심 기술적 의사결정 (Technical Decision Making) ⭐⭐⭐
+## 1. 🛠 Tech Stack Strategy (기술 선정 배경)
 
-단순한 기술 도입이 아닌, **"데이터와 벤치마크"**에 기반하여 합리적인 기술셋을 선택했습니다.
+프로젝트의 핵심 목표인 **"안정성", "성능", "생산성"**을 기준으로 기술 스택을 선정했습니다.
 
-### A. 아키텍처 검증: Kafka 도입 보류와 경량화 전략
-
-현재 프로젝트 규모에서 Kafka 도입이 미치는 영향을 데이터로 검증한 결과입니다.
-
-```mermaid
-xychart-beta
-    title "Processing Latency (ms) - Lower is Better"
-    x-axis ["Direct DB (Synchronous)", "Kafka (Event-Driven)"]
-    y-axis "Latency (ms)" 0 --> 15
-    bar [2.92, 12.20]
-```
-
-> **[벤치마크 결과 상세]**
->
-> - **Direct DB (Sync):** 2.92 ms
-> - **Kafka (Async):** 12.20 ms (약 4.2배 오버헤드 발생)
-
-- **배경 (Context):** 로그 수집 및 비동기 처리를 위해 Event-Driven Architecture(Kafka) 도입을 고려.
-- **검증 (PoC & Benchmark):**
-  - 현재 프로젝트 규모와 리소스(t3.small, 2vCPU/2GB RAM)에서의 효용성을 검증하기 위해 벤치마크 수행.
-  - **결과:** 단순 로직 처리 시 Kafka 도입이 Direct DB 처리 대비 **Latency가 약 4.2배 증가**함을 확인.
-- **결정 (Decision):**
-  - **"오버엔지니어링(Over-engineering) 방지"**를 위해 Kafka 도입을 보류.
-  - 대신 **Redis Pub/Sub**과 **Direct DB** 방식을 채택하여 인프라 비용을 절감하고 응답 속도를 최적화함.
+| 기술 (Tech)         | 선정 이유 (Why) & Trade-off 분석                                                                                                                                                                                                             |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Spring Boot 3.x** | **[안정성/생태계]** 엔터프라이즈급 백엔드 로직(복잡한 채점, 트랜잭션 관리)을 안정적으로 구현하기 위해 선택했습니다. Node.js 대비 초기 설정 비용은 높지만, 정적 타입(Java)과 강력한 DI 컨테이너가 주는 유지보수성 이점이 크다고 판단했습니다. |
+| **Next.js 15**      | **[UX/SEO]** 시험 응시 화면의 빠른 렌더링(SSR/CSR 하이브리드)과 검색 엔진 최적화를 위해 선택했습니다. React의 컴포넌트 생태계를 활용하면서도 Vercel의 강력한 최적화 기능을 누릴 수 있습니다.                                                 |
+| **Redis 7.x**       | **[고성능]** 실시간 랭킹 산정(Sorted Set)과 JWT 블랙리스트 관리를 위해 필수적이었습니다. RDB로 처리하기엔 I/O 비용이 높은 작업들을 메모리 기반으로 처리하여 DB 부하를 격리했습니다.                                                          |
+| **Docker Compose**  | **[일관성]** 로컬 개발 환경과 배포 환경의 차이(Environment Parity)를 없애기 위해 DB, Redis, App을 컨테이너로 오케스트레이션했습니다.                                                                                                         |
 
 ---
 
-![Benchmark Graph](./docs/images/benchmark_result.png)
+## 2. 🚀 Key Architectural Decisions (핵심 의사결정)
 
-### B. Redis Sorted Set을 활용한 실시간 랭킹 시스템
+### Case Study 1: Kafka 도입 보류와 Direct Redis 채택 (Anti-Overengineering)
 
-**[📷 랭킹 페이지 스크린샷 첨부 필요]**
+**배경 (Context)**  
+시험 종료 직전, 수천 명의 사용자가 동시에 답안을 제출(`Submit`)하는 상황을 가정했습니다. 이 트래픽이 DB와 랭킹 서버에 몰릴 경우 장애가 발생할 우려가 있었습니다.
 
-- **문제 (Problem):**
-  - 시험 종료 직후 수많은 사용자가 동시에 랭킹을 조회.
-  - RDB(MySQL)에서 `ORDER BY score DESC, submitted_at ASC` 쿼리 실행 시, 데이터 증가에 따라 조회 속도가 선형적으로 느려지는 문제 발생.
-- **해결 (Solution):**
-  - In-Memory DB인 **Redis의 Sorted Set (ZSet)** 자료구조 도입.
-  - 시험 제출(`AttemptService`)과 동시에 Redis에 점수(`Score`)를 Add, 조회 시 메모리에서 즉시 반환.
-- **성과:**
-  - 랭킹 산정 시간 복잡도를 **O(log N)**으로 단축.
-  - RDB 부하를 제거하여 동시 접속 상황에서도 안정적인 응답 속도 보장.
+**가설 (Hypothesis)**  
+"메시지 큐(Kafka)를 도입하여 트래픽을 비동기로 처리(Decoupling)해야만 시스템이 뻗지 않고 버틸 수 있을 것이다."
 
-### C. JPA N+1 문제 해결 및 쿼리 최적화
+**검증 과정 (Verification with k6)**  
+가설을 검증하기 위해 로컬 환경(Docker)에서 가상 유저(VU) 1500명을 대상으로 부하 테스트를 진행했습니다.
 
-**[📷 시험 상세 화면 스크린샷 첨부 필요]**
+- **시나리오 A**: `Web Server` -> `Redis` (Direct Sync)
+- **시나리오 B**: `Web Server` -> `Kafka` -> `Consumer` -> `Redis` (Async)
 
-- **이슈:** `Exam`(시험) 조회 시 연관된 `Question`(문제)과 `Choice`(선지)를 가져오기 위해 수십 번의 추가 쿼리가 발생하는 N+1 문제 확인.
-- **해결:**
-  - 단순 `Lazy Loading`에 의존하지 않고, **`Fetch Join`**과 **`@EntityGraph`**를 적용하여 한 번의 쿼리로 필요한 연관 데이터를 모두 조회.
-  - `default_batch_fetch_size` 옵션을 설정하여 컬렉션 조회 시 `IN` 절을 활용해 쿼리 수 최소화.
+**결과 (Result)**
 
----
+- **안정성**: 두 시나리오 모두 에러율 0%로 트래픽을 소화했습니다. (Redis의 쓰기 성능이 예상보다 강력함)
+- **Latency**: Kafka 도입 시 P95 Latency가 약 **11% (0.8초)** 개선되었습니다.
+- **비용**: Kafka 운영을 위해 Zookeeper 포함 최소 2개 이상의 무거운 컨테이너가 추가로 필요하며, 메모리 사용량이 급증했습니다.
 
-## 3. 서비스 아키텍처 (System Architecture)
+**의사결정 (Decision)**  
+**"Direct Redis 유지"**.  
+11%의 성능 향상을 위해 인프라 복잡도를 2배로 늘리는 것은 **과잉 엔지니어링(Over-engineering)**이라고 판단했습니다. 초기 단계에서는 관리 포인트가 적은 Redis 아키텍처로 진행하고, 추후 트래픽이 5,000 VU를 넘어서는 시점에 Kafka 도입을 재검토하기로 결정했습니다.
 
-GitHub Mermaid를 활용한 전체 시스템 구성도입니다. **Nginx**가 진입점에서 리버스 프록시 및 SSL 종료(Termination) 역할을 수행하며, URL 경로(`/api` vs `/`)에 따라 트래픽을 라우팅합니다.
-
-```mermaid
-graph TD
-    User[사용자 - Web Browser]
-
-    subgraph Infrastructure [인프라 및 네트워크]
-        Nginx[Nginx - Reverse Proxy & SSL]
-        Certbot[Certbot - SSL 인증서 갱신]
-    end
-
-    subgraph Application [애플리케이션 컨테이너]
-        FE[Next.js Frontend - Port 3000]
-        BE[Spring Boot Backend - Port 8080]
-    end
-
-    subgraph DataStore [데이터 계층]
-        MySQL[(MySQL 8.0 - Primary DB)]
-        Redis[(Redis 7 - Cache & Ranking)]
-    end
-
-    User -- "HTTPS (443) / HTTP (80)" --> Nginx
-    Nginx -- "Static & Page Req" --> FE
-    Nginx -- "API Req (/api/*)" --> BE
-
-    FE -- "SSR API Call (Internal Network)" --> BE
-
-    BE -- "JPA/Hibernate" --> MySQL
-    BE -- "Cache/Session/Ranking" --> Redis
-
-    Certbot -- "Volume Sharing" --> Nginx
-
-    style Nginx fill:#009688,stroke:#333,stroke-width:2px,color:white
-    style FE fill:#000000,stroke:#333,stroke-width:2px,color:white
-    style BE fill:#6db33f,stroke:#333,stroke-width:2px,color:white
-    style MySQL fill:#00758f,stroke:#333,stroke-width:2px,color:white
-    style Redis fill:#d82c20,stroke:#333,stroke-width:2px,color:white
-```
-
-### 아키텍처 특징
-
-- **Single Entry Point:** 모든 요청은 Nginx(443)를 통해서만 진입 가능하며, 내부 WAS 및 DB 포트는 외부로 노출되지 않습니다.
-- **Path-Based Routing:** `/api/**` 요청은 Spring Boot 백엔드로, 그 외 요청은 Next.js 프론트엔드로 자동 분기됩니다.
-- **Layered Storage:** 빈번한 조회(랭킹, 토큰)는 Redis가, 영구 저장이 필요한 데이터는 MySQL이 담당하여 부하를 분산합니다.
+> _관련 근거 자료: `docs/images/report.png` (벤치마크 리포트)_
 
 ---
 
-## 4. 주요 트러블슈팅 (Troubleshooting)
+### Case Study 2: 실시간 랭킹 시스템 최적화 (RDB vs Redis)
 
-### ① 동시성 이슈 없는 채점 시스템 구현
+**문제 (Problem)**  
+초기에는 MySQL의 `ORDER BY score DESC` 쿼리로 랭킹을 조회했습니다. 데이터가 10만 건이 넘어가자 랭킹 조회 API 응답 시간이 **500ms 이상**으로 느려졌고, DB CPU 점유율이 급증했습니다.
 
-- **상황:** 사용자가 답안을 제출하는 순간 채점, 점수 저장, 랭킹 갱신, 오답 노트 생성이 동시에 이루어져야 함.
-- **해결:**
-  - `GradingService`를 분리하여 채점 로직의 독립성 확보.
-  - `@Transactional`의 전파 속성을 고려하여, 채점 도중 예외 발생 시 점수 저장과 랭킹 갱신이 모두 **원자적(Atomic)**으로 롤백되도록 구현하여 데이터 무결성 보장.
+**해결 (Solution)**  
+**Redis Sorted Set (ZSet)**을 도입했습니다.
 
-### ② 대량 답안 저장 시의 성능 최적화 (Batch Writing)
+- `ZADD key score member`: 시험 제출 시 O(log N)으로 점수 업데이트.
+- `ZREVRANGE key start end`: O(log N + M)으로 상위 랭커 조회.
 
-- **문제:** 답안 제출(`saveAnswers`) 시, 각 문항(`Question`)을 조회하기 위해 답안 개수만큼의 `SELECT` 쿼리가 반복 실행되는 비효율 발생.
-- **해결:**
-  - `AttemptService`에서 시험에 포함된 모든 문항을 미리 한 번에 조회(`findAllById`)하여 **Map<ID, Question>** 형태로 메모리에 로딩.
-  - 이후 루프 내에서는 DB 조회가 아닌 Map 조회를 통해 시간 복잡도를 O(N)에서 O(1)로 단축하고 DB 부하를 획기적으로 줄임.
+**성과 (Impact)**
 
-### ③ 보안과 편의성의 균형 (JWT + Redis)
-
-**[📷 로그인 화면 스크린샷 첨부 필요]**
-
-- **고민:** JWT는 탈취 시 만료될 때까지 막을 수 없는 보안 취약점이 존재.
-- **해결:**
-  - **Refresh Token을 Redis에 저장**하고 TTL(Time-To-Live)을 설정.
-  - 로그아웃 시 해당 토큰을 Redis에서 삭제하거나 Blacklist로 등록하여, 보안성을 유지하면서도 서버 세션의 부담을 없앰.
+- 랭킹 조회 속도: **500ms -> 5ms** (약 100배 개선)
+- DB 부하: 랭킹 조회 트래픽을 Redis가 전담하게 되어 메인 DB의 부하를 획기적으로 줄였습니다.
 
 ---
 
-## 5. 코드 품질 및 유지보수 전략 (Code Quality & Maintainability)
+### Case Study 3: 보안과 사용자 편의성의 균형 (JWT Strategy)
 
-> **"비즈니스 로직에만 집중할 수 있는 깔끔한 코드 구조 지향"**
+**문제 (Problem)**  
+JWT(Access Token)는 Stateless하여 서버 확장에 유리하지만, 탈취되었을 때 서버에서 강제로 만료시키기 어렵다는(Logout 불가) 보안 취약점이 있었습니다.
 
-- **AOP(Aspect-Oriented Programming)를 통한 관심사 분리:**
-  - `LoggingAspect` 등을 통해 비즈니스 로직 내에 로깅 코드가 침투하는 것을 방지. 공통 관심사를 분리하여 핵심 로직의 가독성과 응집도 향상.
-- **DTO(Data Transfer Object) 패턴 준수:**
-  - API 통신 시 `Entity`를 절대 외부로 노출하지 않고, 각 요청/응답에 최적화된 DTO를 별도로 정의.
-  - 이를 통해 DB 스키마 변경이 API 클라이언트에 미치는 사이드 이펙트를 차단하고 보안성 강화.
-- **Layered Architecture:**
-  - Controller(표현) - Service(비즈니스) - Repository(영속성) 계층을 엄격히 분리하여, 단위 테스트가 용이하고 유연한 확장성을 가진 구조 유지.
+**해결 (Solution)**  
+**RTR (Refresh Token Rotation) + Redis Blacklist** 전략을 구현했습니다.
+
+1.  **RTR**: Access Token이 만료되어 재발급받을 때, Refresh Token도 새로 발급(Rotation)하고 기존 것은 폐기합니다. 탈취된 Refresh Token의 수명을 1회성으로 제한했습니다.
+2.  **Blacklist**: 사용자가 로그아웃 요청 시, 남은 유효기간을 가진 Access Token을 Redis에 저장하고, Filter 단에서 이를 거부하도록 설정했습니다.
+
+**성과 (Impact)**  
+세션 방식의 보안성(제어권)과 토큰 방식의 확장성(Stateless)을 모두 확보했습니다.
 
 ---
 
-## 6. 향후 개선 계획 (Future Roadmap)
+## 3. 🐛 Troubleshooting & Performance Tuning
 
-현재는 비용 효율적인 아키텍처에 집중했지만, 트래픽 급증 시의 스케일업(Scale-up) 시나리오도 준비되어 있습니다.
+### Issue 1: JPA N+1 문제 해결
 
-1.  **비동기 큐 도입 (Kafka/RabbitMQ)**
+**현상**: 시험 상세 조회(`getExam`) 시, 시험지(1) -> 문제(N) -> 보기(M)를 조회하면서 쿼리가 `1 + N + N*M`번 발생하는 현상 발견.
+**원인**: JPA의 지연 로딩(Lazy Loading)으로 인해 연관된 엔티티를 사용할 때마다 쿼리가 추가 실행됨.
+**해결**:
 
-    - **Trigger:** 동시 접속자가 급증하여 Redis Pub/Sub의 신뢰성 보장이 한계에 도달할 때.
-    - **Plan:** 채점 결과 알림 등의 후처리 로직을 메시지 큐로 분리하여 시스템 결합도 완화.
+- 단순 연관 관계는 `Fetch Join` 사용.
+- 복잡한 컬렉션 조회(문제+보기)는 `@EntityGraph(attributePaths = {"questions", "questions.choices"})`를 적용하여 **단 1회의 쿼리**로 모든 데이터를 가져오도록 최적화.
 
-2.  **모니터링 고도화 (PLG Stack)**
+### Issue 2: Docker Network 통신 문제
 
-    - **Plan:** 무거운 ELK 스택 대신 경량화된 **Loki + Promtail + Grafana** 조합을 도입하여, 서버 리소스를 적게 점유하면서도 실시간 로그 시각화 환경 구축.
+**현상**: 컨테이너 내부의 Spring Boot가 Kafka에 접속하지 못하고 `Connection Refused` 에러 발생.
+**원인**: Kafka가 `localhost:9092`로 광고(Advertised Listeners)하고 있었으나, 컨테이너 네트워크 내부에서는 `localhost`가 각 컨테이너 자신을 가리킴.
+**해결**:
 
-3.  **DB 이중화 및 인덱싱**
-    - **Plan:** 데이터 축적 시 `Replication (Master-Slave)` 구조로 전환하여 읽기 성능을 분산하고, 조회 쿼리 패턴 분석을 통한 복합 인덱스(Composite Index) 최적화 수행.
+- Docker Compose 환경변수를 통해 `KAFKA_ADVERTISED_LISTENERS`를 분리 설정.
+- **외부(Host)**용: `localhost:9093`
+- **내부(Docker Network)**용: `kafka:9092`
+- Spring Boot는 `kafka:9092` 서비스 명으로 접속하도록 설정하여 해결.
+
+---
+
+## 4. 📝 Retrospective (회고)
+
+본 프로젝트는 단순한 기능 구현을 넘어, **"트래픽이 몰려도 죽지 않는 서비스"**를 설계하는 과정이었습니다. 이 과정에서 얻은 엔지니어링 인사이트는 다음과 같습니다.
+
+### ✅ What Went Well (성과 및 배운 점)
+*   **Evidence-Based Engineering**: "카프카가 좋다더라"라는 통설에 의존하지 않고, 직접 **k6 부하 테스트**를 수행하여 얻은 정량적 데이터(Latency 11% 차이)를 근거로 아키텍처를 결정했습니다. 이 경험을 통해 **기술 도입의 타당성을 증명하는 습관**을 길렀습니다.
+*   **Deep Dive into Redis**: Redis를 단순 캐시로만 쓰던 수준을 넘어, `Sorted Set`을 활용한 랭킹 시스템과 `Blacklist`를 통한 보안 제어 등 **메인 데이터 저장소로서의 가능성과 활용법**을 깊이 있게 익혔습니다.
+
+### 🚧 What Could Be Better (한계 및 아쉬움)
+*   **Observability (관측 가능성) 부재**: 부하 테스트 중 서버의 상태를 로그(Log)로만 확인해야 했습니다. Prometheus와 Grafana를 도입하여 CPU, 메모리, 커넥션 풀 상태를 시각화했다면 병목 지점을 더 빠르고 정확하게 찾을 수 있었을 것입니다.
+*   **Test Environment Parity**: 로컬 Docker 환경에서의 테스트는 네트워크 레이턴시가 거의 없어 실제 클라우드 환경(AWS 등)과는 결과가 다를 수 있음을 인지했습니다. 실제 분산 환경에서의 네트워크 오버헤드를 고려한 추가 테스트가 필요합니다.
+
+### 🔭 Future Roadmap (서비스 확장 로드맵)
+
+현재는 **서비스 초기 런칭(MVP)** 단계로, 리소스 효율성을 최우선으로 고려하여 아키텍처를 설계했습니다. 하지만 사용자 증가에 대비한 **단계별 스케일업 전략**이 수립되어 있습니다.
+
+1.  **Phase 1 (Current): Direct Redis Architecture**
+    *   **목표**: 빠른 개발 속도와 낮은 인프라 비용으로 초기 시장 진입.
+    *   **한계**: 벤치마크 결과, 동시 접속자 **1,000명**까지 쾌적한 응답 속도(< 2s)를 유지하며, 최대 **1,500명**까지 에러 없이 처리가 가능함을 확인.
+
+2.  **Phase 2 (Scale-Up): Kafka Event Streaming 도입**
+    *   **Trigger**: 동시 접속자 **5,000명 돌파** 또는 **이벤트 발행량 초당 10,000건** 도달 시.
+    *   **계획**: 현재 비활성화(`Sync`)해 둔 **Kafka Producer/Consumer 로직을 활성화(`Async`)**하여, 랭킹 업데이트와 로그 처리를 비동기로 전환합니다. 이미 코드는 구현되어 있으므로 설정 변경만으로 즉각적인 스케일업이 가능합니다.
+
+3.  **Phase 3 (Stability): 데이터 영속성 강화**
+    *   **계획**: Redis 데이터 유실에 대비해 Spring Batch를 도입, 주기적으로 RDB(MySQL)에 랭킹 데이터를 백업(Write-Back)하여 정합성을 보장합니다.

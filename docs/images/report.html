@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CBT High-Load Performance Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Pretendard", sans-serif;
+        background: #f3f4f6;
+      }
+      .card {
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      }
+    </style>
+  </head>
+  <body class="p-6 md:p-12">
+    <div class="max-w-6xl mx-auto">
+      <header class="mb-12 text-center">
+        <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">
+          CBT 트래픽 부하 테스트 리포트
+        </h1>
+        <p class="text-gray-500 mt-3 text-lg">
+          트래픽 급증(Spike) 시나리오: Sync vs Async 안정성 비교
+        </p>
+        <p class="text-gray-400 mt-2 text-sm max-w-2xl mx-auto">
+          * Note: <strong>Step Stress Test</strong> 방식을 사용하여 VU를
+          100명에서 1500명까지 30초 단위로 증가시켰습니다.<br />데이터는 CSV
+          로그를 기반으로 구간별 재집계되었습니다.
+        </p>
+      </header>
+      <div class="mb-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="p-6 bg-gray-50 rounded-xl border border-gray-200">
+          <h3
+            class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2"
+          >
+            Hardware Spec
+          </h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-400">Processor</span
+              ><span class="font-semibold text-gray-700"
+                >Intel(R) Core(TM) i5-10600K CPU @ 4.10GHz</span
+              >
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Memory (RAM)</span
+              ><span class="font-semibold text-gray-700">15.6 GB</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 bg-gray-50 rounded-xl border border-gray-200">
+          <h3
+            class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 border-b pb-2"
+          >
+            Test Scenario (Step Stress)
+          </h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-400">Max VUs</span
+              ><span class="font-semibold text-gray-700">1500 Users</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Duration</span
+              ><span class="font-semibold text-gray-700">2m 30s</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Stages</span
+              ><span class="font-semibold text-gray-700"
+                >100 -> 500 -> 1000 -> 1500 VU</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card p-8 mb-12">
+        <h3 class="text-xl font-bold text-gray-800 mb-2">
+          📈 VU 증가에 따른 응답 지연(Latency) 추이
+        </h3>
+        <p class="text-sm text-gray-400 mb-6">
+          동시 접속자가 늘어날 때 응답 속도가 얼마나 느려지는지를 보여줍니다.
+          (P95 기준, 낮을수록 좋음)
+        </p>
+        <div class="h-96"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card p-8 overflow-hidden">
+        <h3 class="text-lg font-bold text-gray-800 mb-6">
+          📊 구간별 상세 데이터 (P95 Latency)
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm text-left text-gray-500">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+              <tr>
+                <th class="px-6 py-3">Stage (Load)</th>
+                <th class="px-6 py-3">Sync (Redis)</th>
+                <th class="px-6 py-3">Async (Kafka)</th>
+                <th class="px-6 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">
+                  Warm-up (0-100 VU)
+                </td>
+                <td class="px-6 py-4">72.0 ms</td>
+                <td class="px-6 py-4 text-indigo-600 font-bold">69.5 ms</td>
+                <td class="px-6 py-4">
+                  <span
+                    class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded"
+                    >STABLE</span
+                  >
+                </td>
+              </tr>
+              <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">
+                  Load (100-500 VU)
+                </td>
+                <td class="px-6 py-4">1215.8 ms</td>
+                <td class="px-6 py-4 text-indigo-600 font-bold">1480.7 ms</td>
+                <td class="px-6 py-4">
+                  <span
+                    class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded"
+                    >STABLE</span
+                  >
+                </td>
+              </tr>
+              <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">
+                  Stress (500-1000 VU)
+                </td>
+                <td class="px-6 py-4">4735.1 ms</td>
+                <td class="px-6 py-4 text-indigo-600 font-bold">4510.4 ms</td>
+                <td class="px-6 py-4">
+                  <span
+                    class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded"
+                    >WARNING</span
+                  >
+                </td>
+              </tr>
+              <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900">
+                  Spike (1000-1500 VU)
+                </td>
+                <td class="px-6 py-4">6895.6 ms</td>
+                <td class="px-6 py-4 text-indigo-600 font-bold">6908.0 ms</td>
+                <td class="px-6 py-4">
+                  <span
+                    class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded"
+                    >CRITICAL</span
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script>
+      Chart.defaults.font.family = "Pretendard";
+      const ctx = document.getElementById("trendChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [
+            "Warm-up (0-100 VU)",
+            "Load (100-500 VU)",
+            "Stress (500-1000 VU)",
+            "Spike (1000-1500 VU)",
+          ],
+          datasets: [
+            {
+              label: "Sync (Direct Redis)",
+              data: [72.03, 1215.82, 4735.15, 6895.62],
+              borderColor: "#ef4444",
+              backgroundColor: "#ef4444",
+              tension: 0.3,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+            },
+            {
+              label: "Async (via Kafka)",
+              data: [69.5, 1480.68, 4510.42, 6908.01],
+              borderColor: "#6366f1",
+              backgroundColor: "#6366f1",
+              tension: 0.3,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Latency (ms)" },
+              grid: { color: "#f3f4f6" },
+            },
+            x: { grid: { display: false } },
+          },
+          plugins: {
+            tooltip: {
+              mode: "index",
+              intersect: false,
+              padding: 10,
+              backgroundColor: "rgba(0,0,0,0.8)",
+            },
+            legend: {
+              position: "top",
+              labels: { usePointStyle: true, padding: 20 },
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
