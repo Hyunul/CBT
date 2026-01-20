@@ -1,58 +1,88 @@
-# CBT · 온라인 CBT 플랫폼
+# CBT Exam Platform
 
-이 프로젝트는 개인 응시 중심의 온라인 CBT(Computer Based Test) 플랫폼 서비스입니다. Next.js(App Router)와 Spring Boot 3 기반으로 구성되어 있으며, Redis ZSet 랭킹과 JWT RTR(Refresh Token Rotation)로 성능과 보안을 강화했습니다.
+개인 학습 및 응시를 위한 고성능 온라인 CBT(Computer Based Test) 플랫폼입니다.
+최신 기술 스택(Next.js 16, Spring Boot 3.5, React 19)을 적용하여 개발되었으며, 대용량 트래픽 처리를 고려한 설계(Redis 랭킹, 비동기 처리 가능 구조)와 보안(JWT RTR)을 갖추고 있습니다.
 
-## 핵심 기능
-- 시험/문항 관리: 시리즈/회차 구성, 공개/비공개 전환, 문항 일괄 등록
-- 응시/채점: 응시 시작 -> 답안 저장 -> 제출 시 원자적 채점 및 기록
-- 랭킹: Redis Sorted Set 기반 시험별/글로벌 랭킹
-- 인증/보안: JWT Access + RTR Refresh, Redis 블랙리스트 로그아웃
-- 공개 상세 페이지: 시험 상세/문항 미리보기/랭킹/관련 시험 노출
+## 🛠 기술 스택 (Tech Stack)
 
-## 아키텍처 개요
-- 흐름: Nginx -> Next.js -> Spring Boot API -> MySQL/Redis
-- FE는 `/api` 경로를 통해 BE로 프록시(rewrite)
-- BE는 제출 시 동기 채점 후 Redis 랭킹 반영
+### Frontend
+- **Core:** Next.js 16.0.7 (App Router), React 19.2.0, TypeScript
+- **State & Fetching:** Zustand, React Query (@tanstack/react-query)
+- **Styling:** Tailwind CSS 4, Lucide React
+- **Visualization:** Chart.js, React-Chartjs-2
 
-## 빠른 시작
-### 로컬 개발
-Backend:
+### Backend
+- **Core:** Java 17, Spring Boot 3.5.7
+- **Database:** Spring Data JPA (MySQL 8.0), Spring Data Redis (Redis 7)
+- **Security:** Spring Security, JWT (with Refresh Token Rotation)
+- **Docs:** SpringDoc OpenAPI (Swagger)
+
+### Infrastructure
+- **Container:** Docker, Docker Compose
+- **Proxy:** Nginx (Reverse Proxy, SSL termination ready)
+
+## ✨ 핵심 기능 (Key Features)
+
+1.  **시험 및 문항 관리**
+    - 시리즈(Series) 및 회차(Exam) 계층 구조 관리
+    - 문항 일괄 등록 및 공개/비공개 설정
+    - 관리자 전용 대시보드 제공
+
+2.  **실시간 응시 및 채점**
+    - 타이머 및 답안 자동 저장
+    - 제출 시 원자적(Atomic) 채점 프로세스
+    - 정오답 노트 및 해설 확인
+
+3.  **실시간 랭킹 시스템**
+    - Redis Sorted Set(ZSet)을 활용한 고성능 랭킹 산출
+    - 시험별, 전체 랭킹 조회 및 내 순위 확인
+
+4.  **보안 및 인증**
+    - JWT Access Token + Refresh Token Rotation (RTR) 방식
+    - Redis 블랙리스트 기반 로그아웃 처리
+    - Role 기반 권한 관리 (ADMIN, USER)
+
+## 🚀 시작하기 (Getting Started)
+
+### 사전 요구 사항 (Prerequisites)
+- Java 17+
+- Node.js 20+
+- Docker & Docker Compose (선택)
+
+### 1. 로컬 개발 환경 (Local Development)
+
+**Backend:**
 ```bash
 cd cbt-be
+# 의존성 설치 및 실행
 ./gradlew bootRun
 ```
-Frontend:
+* 서버는 `http://localhost:8080`에서 실행됩니다.
+* Swagger 문서: `http://localhost:8080/swagger-ui/index.html`
+
+**Frontend:**
 ```bash
 cd cbt-fe
 npm install
 npm run dev
 ```
-- FE: http://localhost:3000
-- BE: http://localhost:8080
-- Swagger: http://localhost:8080/swagger-ui/index.html
+* 클라이언트는 `http://localhost:3000`에서 실행됩니다.
 
-### Docker Compose (운영 구성)
-`docker-compose.yml`은 SSL 종단(Nginx)과 도메인(`hyunul.shop`)을 전제로 설정되어 있습니다. 로컬에서 그대로 사용하려면 인증서/도메인 설정을 맞추거나 Nginx 설정을 조정해야 합니다.
+### 2. 도커 기반 실행 (Docker Compose)
+프로젝트 전체를 컨테이너로 실행합니다. Nginx, MySQL, Redis가 자동으로 설정됩니다.
 
 ```bash
 docker-compose up -d --build
 ```
+* 서비스 접속: `http://localhost` (Nginx 포트 80)
 
-## 환경 변수 체크포인트
-Backend:
-- `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`
-- `SPRING_DATA_REDIS_HOST/PORT/PASSWORD`
-- `JWT_SECRET` (필수)
-- `jwt.expiration`, `jwt.refresh-expiration`
+## 📂 폴더 구조 (Project Structure)
 
-Frontend:
-- `NEXT_PUBLIC_API_URL` (클라이언트 호출)
-- `INTERNAL_API_URL` (Next 서버에서 BE로 리라이트)
-
-## 폴더 구조 (요약)
 ```
-cbt-be/   # Spring Boot API 서버
-cbt-fe/   # Next.js 프런트엔드
-nginx/    # 리버스 프록시/SSL
-docs/     # 아키텍처/벤치마크 이미지
+CBT/
+├── cbt-be/            # Spring Boot Backend source
+├── cbt-fe/            # Next.js Frontend source
+├── nginx/             # Nginx configuration
+├── docker-compose.yml # Container orchestration config
+└── docs/              # Documentation & assets
 ```
