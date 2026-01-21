@@ -36,7 +36,7 @@ public class AuthService {
             throw new RuntimeException("비밀번호 불일치");
         }
         
-        String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
+        String accessToken = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         // Save Refresh Token to Redis
@@ -67,7 +67,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         // 4. Generate new Access Token & Refresh Token (RTR)
-        String newAccessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
+        String newAccessToken = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         // 5. Update Redis with new Refresh Token (Rotate)

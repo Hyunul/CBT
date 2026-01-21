@@ -23,12 +23,18 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username; // 로그인 ID
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
     @com.fasterxml.jackson.annotation.JsonIgnore
-    @Column(nullable = false)
-    private String password; // 암호화된 비밀번호
+    @Column
+    private String password; // 암호화된 비밀번호 (OAuth 유저는 null일 수 있음)
+
+    @Column
+    private String provider; // google, kakao, naver
+
+    @Column
+    private String providerId; // sub or id from provider
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

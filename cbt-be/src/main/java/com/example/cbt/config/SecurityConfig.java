@@ -21,6 +21,8 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final CorsConfigurationSource corsConfigurationSource; // ★ 주입
+    private final com.example.cbt.auth.CustomOAuth2UserService customOAuth2UserService;
+    private final com.example.cbt.auth.OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -64,6 +66,10 @@ public class SecurityConfig {
                     // --- All other requests must be authenticated ---
                     // This will protect user-specific endpoints like /api/attempts/history
                     .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                .successHandler(oAuth2LoginSuccessHandler)
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
