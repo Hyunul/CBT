@@ -34,9 +34,18 @@ UPDATE users SET role = 'ROLE_ADMIN' WHERE username = '관리자로 지정할 �
 docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build --wait
 ```
 
-EC2 자동 배포에서도 HTTPS 구성을 쓰려면 서버 `.env`에 `COMPOSE_FILE=docker-compose.yml:docker-compose.https.yml`을 설정합니다. Linux 경로 구분자는 콜론입니다. TLS는 Nginx에서 종료하며 HTTP는 HTTPS로 전환합니다. 별도 로드밸런서에서 TLS를 종료한다면 신뢰한 프록시만 원본에 접근하게 제한하고 전달 헤더를 환경에 맞춰야 합니다. 외부의 임의 `X-Forwarded-Proto`를 그대로 신뢰하지 않습니다.
+GCP VM 자동 배포에서도 HTTPS 구성을 쓰려면 서버 `.env`에 `COMPOSE_FILE=docker-compose.yml:docker-compose.https.yml`을 설정합니다. Linux 경로 구분자는 콜론입니다. TLS는 Nginx에서 종료하며 HTTP는 HTTPS로 전환합니다. 별도 로드밸런서에서 TLS를 종료한다면 신뢰한 프록시만 원본에 접근하게 제한하고 전달 헤더를 환경에 맞춰야 합니다. 외부의 임의 `X-Forwarded-Proto`를 그대로 신뢰하지 않습니다.
 
-배포 전에 서버 Docker 레지스트리 로그인, `.env`, GitHub production environment 보호 규칙과 Docker/EC2 secrets를 준비합니다. 롤백은 이전 커밋 SHA를 `IMAGE_TAG`로 지정합니다. 스키마 변경은 이미지 롤백과 별개이므로 백업 복구 계획이 필요합니다.
+배포 전에 서버 Docker 레지스트리 로그인, `.env`, GitHub production environment 보호 규칙과 Docker/GCP VM secrets를 준비합니다. 롤백은 이전 커밋 SHA를 `IMAGE_TAG`로 지정합니다. 스키마 변경은 이미지 롤백과 별개이므로 백업 복구 계획이 필요합니다.
+
+### GCP VM 준비
+
+1. Compute Engine VM을 만듭니다. 권장: `e2-standard-2`(vCPU 2, 8GB), 리전 `asia-northeast3`(서울), Ubuntu LTS, 디스크 30GB `pd-balanced`. 외부 IP는 고정(정적) IP로 예약합니다.
+2. 방화벽은 80·443만 전체 공개하고, 22(SSH)는 GitHub Actions와 관리자 IP로 제한하거나 IAP를 사용합니다. 3307 등 DB 포트는 열지 않습니다.
+3. VM에 Docker Engine과 Compose 플러그인을 설치하고 배포 계정을 `docker` 그룹에 추가합니다. 배포용 SSH 키를 VM 메타데이터(또는 `~/.ssh/authorized_keys`)에 등록합니다.
+4. `~/CBT/.env`를 `.env.example` 기준으로 작성합니다. `FRONTEND_URL`은 새 도메인 또는 `http://고정IP`로 지정합니다.
+5. GitHub production environment secrets에 `GCP_VM_HOST`(고정 IP), `GCP_VM_USERNAME`, `GCP_VM_SSH_KEY`(개인 키), `DOCKER_USERNAME`, `DOCKER_PASSWORD`를 설정합니다. 기존 `EC2_*` secrets는 전환 후 삭제합니다.
+6. 기존 서버 데이터를 옮길 때는 `mysqldump`로 백업해 새 VM의 DB 컨테이너에 복원한 뒤 첫 배포를 실행합니다. 디스크 스냅샷 일정(일 1회)을 설정해 백업을 자동화합니다.
 
 Nginx는 Docker DNS를 주기적으로 조회해 재생성된 앱 컨테이너의 주소를 반영합니다. 수동 배포에서 Nginx 설정 파일을 수정했다면 `docker compose exec -T nginx nginx -t`로 검사한 후 `docker compose exec -T nginx nginx -s reload`를 실행합니다. 자동 배포는 이 단계를 포함합니다.
 
