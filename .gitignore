@@ -12,3 +12,6 @@
 output/playwright/
 
 docker-compose.override.yml
+
+scraped/
+question-images/
