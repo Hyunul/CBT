@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/lib/api";
+import QuestionText from "@/components/QuestionText";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -124,9 +125,7 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
             >
               문제 {index + 1}
             </h3>
-            <div className="min-w-0 wrap-break-word text-card-foreground text-base whitespace-pre-wrap leading-relaxed">
-              {item.questionText}
-            </div>
+            <QuestionText text={item.questionText} className="block min-w-0 wrap-break-word text-card-foreground text-base leading-relaxed" />
           </div>
         </div>
       </div>
@@ -137,7 +136,7 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
           </div>
           <div className="min-w-0 wrap-break-word">
             <p className="font-semibold text-muted-foreground">답안</p>
-            <p className="wrap-break-word whitespace-pre-wrap font-bold text-lg">
+            <p className="font-question wrap-break-word whitespace-pre-wrap font-bold text-lg">
               {hasAnswer(item) ? userAnswer : (
                 <span className="text-muted-foreground/70">미응답</span>
               )}
@@ -151,7 +150,7 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
             </div>
             <div className="min-w-0 wrap-break-word">
               <p className="font-semibold text-primary">정답</p>
-              <p className="wrap-break-word whitespace-pre-wrap font-bold text-lg text-primary">
+              <p className="font-question wrap-break-word whitespace-pre-wrap font-bold text-lg text-primary">
                 {item.type === "MCQ"
                   ? answerLabel(item.correctAnswer)
                   : item.correctAnswer}

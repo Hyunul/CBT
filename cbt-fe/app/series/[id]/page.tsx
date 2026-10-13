@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, type ExamType } from "@/lib/api";
 import Link from "next/link";
 import { ArrowRight, Calendar, Clock, Loader2 } from "lucide-react";
 
@@ -15,6 +15,7 @@ interface ExamSeries {
 interface Exam {
   id: number;
   title: string;
+  type?: ExamType;
   round: number;
   questionCount: number;
   durationSec: number;
@@ -78,6 +79,9 @@ export default function SeriesDetailPage() {
               className="group flex items-center justify-between p-6 bg-card border rounded-lg hover:border-primary transition-all"
             >
               <div>
+                <span className="mb-2 inline-block rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {exam.type === "PRACTICAL" ? "실기" : "필기"}
+                </span>
                 <h3 className="text-xl font-bold mb-1 group-hover:text-primary transition-colors">
                   {exam.round ? `${exam.round}회차: ` : ""} {exam.title}
                 </h3>
@@ -85,9 +89,13 @@ export default function SeriesDetailPage() {
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" /> {exam.questionCount}문항
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" /> {exam.durationSec / 60}분
-                  </span>
+                  {exam.type === "PRACTICAL" ? (
+                    <span>정답 열람</span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" /> {exam.durationSec / 60}분
+                    </span>
+                  )}
                 </div>
               </div>
               <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />

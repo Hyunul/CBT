@@ -15,3 +15,10 @@ it("connects each radio to its option label and sends the stored choice key", ()
   fireEvent.click(label!);
   expect(onChange).toHaveBeenCalledWith("2");
 });
+
+it("keeps the subjective input without an answer disclosure during an attempt", () => {
+  const { container } = render(<QuestionCard q={{ id: 1, text: "문제", type: "SUBJECTIVE", choices: null, score: 5 }} qNumber={1} value="" onChange={vi.fn()} />);
+  expect(container.querySelector("details")).toBeNull();
+  expect(screen.queryByText("정답 보기")).toBeNull();
+  expect(screen.getByRole("textbox").className).toContain("font-question");
+});

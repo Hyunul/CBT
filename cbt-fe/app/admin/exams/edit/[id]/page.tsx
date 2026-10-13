@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, Exam, errorMessage } from "@/lib/api";
+import { api, Exam, errorMessage, type ExamType } from "@/lib/api";
 import QuestionItemEditor from "@/components/QuestionItemEditor";
 import { Lock, Globe, Save, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -22,6 +22,7 @@ interface Question {
 // 시험 자체의 세부 정보 인터페이스 (공개 상태 포함)
 interface ExamDetails {
   title: string;
+  type: ExamType;
   isPublic: boolean;
   durationSec: number;
   seriesId: number | null;
@@ -36,6 +37,7 @@ export default function ExamEditPage() {
   // ⭐ 시험 상세 정보를 관리하는 상태 추가 (title, isPublic)
   const [examDetails, setExamDetails] = useState<ExamDetails>({
     title: "",
+    type: "WRITTEN",
     isPublic: false,
     durationSec: 600,
     seriesId: null,
@@ -56,6 +58,7 @@ export default function ExamEditPage() {
       .then((res) =>
         setExamDetails({
           title: res.data.title,
+          type: res.data.type ?? "WRITTEN",
           isPublic: res.data.isPublished,
           durationSec: res.data.durationSec,
           seriesId: res.data.series?.id ?? null,
@@ -107,6 +110,7 @@ export default function ExamEditPage() {
         method: "PUT",
         body: JSON.stringify({
           title,
+          type: examDetails.type,
           durationSec: examDetails.durationSec,
           seriesId: examDetails.seriesId,
           round: examDetails.round,
@@ -227,6 +231,36 @@ export default function ExamEditPage() {
           </div>
         </div>
       </div>
+
+      <section className="space-y-4 rounded-lg border bg-card p-6">
+        <div>
+          <label htmlFor="exam-type" className="mb-1 block font-semibold">시험 유형</label>
+          <select
+            id="exam-type"
+            className="w-full border p-2 rounded-sm"
+            value={examDetails.type}
+            onChange={(e) => setExamDetails((prev) => ({ ...prev, type: e.target.value as ExamType }))}
+          >
+            <option value="WRITTEN">필기</option>
+            <option value="PRACTICAL">실기</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="exam-duration" className="mb-1 block font-semibold">시험 시간(초)</label>
+          <input
+            id="exam-duration"
+            type="number"
+            className="w-full border p-2 rounded-sm"
+            value={examDetails.durationSec}
+            aria-describedby={examDetails.type === "PRACTICAL" ? "exam-duration-help" : undefined}
+            onChange={(e) => setExamDetails((prev) => ({ ...prev, durationSec: Number(e.target.value) }))}
+          />
+          {examDetails.type === "PRACTICAL" && (
+            <p id="exam-duration-help" className="mt-1 text-xs text-muted-foreground">실기 학습에는 제한 시간이 적용되지 않습니다. 이 값은 시험 정보 저장에 필요합니다.</p>
+          )}
+        </div>
+        <button className="btn-primary" onClick={saveExamDetails}>시험 정보 저장</button>
+      </section>
 
       {/* Questions Section */}
       <section className="space-y-6">

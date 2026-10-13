@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import QuestionText from "@/components/QuestionText";
 
 interface QuestionDetail {
   id: number;
@@ -50,9 +51,7 @@ export default function QuestionCard({
         <h2 ref={headingRef} id={`question-${q.id}-title`} tabIndex={-1} style={{ scrollMarginTop: "calc(var(--navbar-height) + var(--attempt-header-height, 10rem) + 1rem)" }} className="text-sm font-semibold text-primary mb-2">
           문제 {qNumber}
         </h2>
-        <div id={`question-${q.id}-text`} className="wrap-break-word text-card-foreground text-base whitespace-pre-wrap leading-relaxed">
-          {q.text}
-        </div>
+        <QuestionText id={`question-${q.id}-text`} text={q.text} className="block wrap-break-word text-card-foreground text-base leading-relaxed" />
       </div>
 
       {q.type === "MCQ" ? (
@@ -77,7 +76,7 @@ export default function QuestionCard({
                   checked={value === key}
                   onChange={() => onChange(key)}
                 />
-                <span className="min-w-0 wrap-break-word font-medium text-card-foreground">
+                <span className="min-w-0 wrap-break-word font-question font-medium text-card-foreground">
                   {text}
                 </span>
               </label>
@@ -91,7 +90,7 @@ export default function QuestionCard({
           <textarea
             aria-label="답안"
             aria-describedby={`question-${q.id}-text`}
-            className="input w-full h-32"
+            className="input font-question w-full h-32"
             placeholder="답안을 입력하세요..."
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}

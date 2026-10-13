@@ -115,9 +115,12 @@ export interface User {
   role: string;
 }
 
+export type ExamType = "WRITTEN" | "PRACTICAL";
+
 export interface Exam {
   id: number;
   title: string;
+  type?: ExamType;
   questionCount: number;
   durationSec: number;
   totalScore: number;

@@ -169,7 +169,7 @@ export default function QuestionItemEditor({
       {/* 주관식 */}
       {q.type === "SUBJECTIVE" && (
         <>
-        <label htmlFor={`${id}-keywords`} className="block text-sm font-medium">정답 키워드 (쉼표 구분)</label>
+        <label htmlFor={`${id}-keywords`} className="block text-sm font-medium">정답 키워드 (쉼표 구분, 정답 속 쉼표는 \,)</label>
         <TextareaAuto
           id={`${id}-keywords`}
           className="w-full border p-2 rounded-sm"

@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import ToastProvider from "@/components/ToastProvider";
 import "./globals.css";
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-jetbrains-mono",
+  adjustFontFallback: false,
+});
 
 
 
@@ -16,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={jetbrainsMono.variable}>
       <body className="antialiased">
         <div className="relative flex min-h-screen flex-col bg-background">
           <Navbar />

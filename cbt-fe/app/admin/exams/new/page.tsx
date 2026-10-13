@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api, getSeriesList, ExamSeries, Exam } from "@/lib/api";
+import { api, getSeriesList, ExamSeries, Exam, type ExamType } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -11,6 +11,7 @@ export default function NewExamPage() {
     // 상태값들
     const [title, setTitle] = useState("");
     const [durationSec, setDurationSec] = useState(600);
+    const [type, setType] = useState<ExamType>("WRITTEN");
     
     // 시리즈 관련
     const [seriesList, setSeriesList] = useState<ExamSeries[]>([]);
@@ -27,6 +28,7 @@ export default function NewExamPage() {
                 method: "POST",
                 body: JSON.stringify({
                     title,
+                    type,
                     durationSec,
                     isPublished: false,
                     seriesId: selectedSeriesId,
@@ -87,17 +89,35 @@ export default function NewExamPage() {
                 />
             </div>
 
+            <div>
+                <label htmlFor="exam-type" className="block font-semibold mb-1">시험 유형</label>
+                <select
+                    id="exam-type"
+                    className="w-full border p-2 rounded-sm"
+                    value={type}
+                    onChange={(e) => setType(e.target.value as ExamType)}
+                >
+                    <option value="WRITTEN">필기</option>
+                    <option value="PRACTICAL">실기</option>
+                </select>
+            </div>
+
             {/* 제한시간 */}
             <div>
-                <label className="block font-semibold mb-1">
+                <label htmlFor="exam-duration" className="block font-semibold mb-1">
                     시험 시간(초)
                 </label>
                 <input
+                    id="exam-duration"
+                    aria-describedby={type === "PRACTICAL" ? "exam-duration-help" : undefined}
                     type="number"
                     className="w-full border p-2 rounded-sm"
                     value={durationSec}
                     onChange={(e) => setDurationSec(Number(e.target.value))}
                 />
+                {type === "PRACTICAL" && (
+                    <p id="exam-duration-help" className="mt-1 text-xs text-muted-foreground">실기 학습에는 제한 시간이 적용되지 않습니다. 이 값은 시험 정보 저장에 필요합니다.</p>
+                )}
             </div>
 
             <p className="text-sm text-gray-500">문항을 저장한 뒤 시험을 공개할 수 있습니다.</p>

@@ -78,13 +78,13 @@ it("explains empty filters and allows returning to all questions", async () => {
   expect(screen.getByRole("heading", { name: "문제 1" })).toBeTruthy();
 });
 
-it("uses Korean question and answer labels and preserves plain text without a code style", () => {
+it("uses Korean question and answer labels and the question font while preserving plain text", () => {
   const onChange = vi.fn();
   render(<QuestionCard q={{ id: 1, text: correctItem.questionText, type: "SUBJECTIVE", choices: null, score: 5 }} qNumber={3} value="저장한 답안" onChange={onChange} />);
   expect(screen.getByRole("heading", { name: "문제 3" }).getAttribute("tabindex")).toBe("-1");
   const text = screen.getByText(correctItem.questionText, { exact: true, normalizer: (value) => value });
   expect(text.className).toContain("whitespace-pre-wrap");
-  expect(text.className).not.toContain("font-mono");
+  expect(text.className).toContain("font-question");
   expect(text.className).not.toContain("bg-slate-900");
   const answer = screen.getByRole("textbox", { name: "답안" });
   expect((answer as HTMLTextAreaElement).value).toBe("저장한 답안");

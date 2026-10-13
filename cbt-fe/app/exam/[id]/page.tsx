@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, type ExamType } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -11,10 +11,12 @@ import QuestionPreview from "@/components/QuestionPreview";
 import RankingSnippet from "@/components/RankingSnippet";
 import RelatedExams from "@/components/RelatedExams";
 import ExamFAQ from "@/components/ExamFAQ";
+import PracticalStudy, { type StudyQuestion } from "@/components/PracticalStudy";
 
 interface ExamDetail {
   id: number;
   title: string;
+  type?: ExamType;
   description?: string;
   questionCount: number;
   durationSec: number;
@@ -50,32 +52,47 @@ export default function ExamDetailPage() {
   const [previewItems, setPreviewItems] = useState<QuestionRes[]>([]);
   const [rankingItems, setRankingItems] = useState<RankDto[]>([]);
   const [relatedItems, setRelatedItems] = useState<RelatedExam[]>([]);
+  const [studyItems, setStudyItems] = useState<StudyQuestion[]>([]);
 
   useEffect(() => {
     const examId = Array.isArray(id) ? id[0] : id;
     if (!examId) return;
 
 
-    const examRequest = api<{ data: ExamDetail }>(`/api/exams/${examId}`);
-    const questionRequest = api<{ data: QuestionRes[] }>(
-      `/api/exams/${examId}/questions`
-    ).catch(() => ({ data: [] }));
-    const rankingRequest = api<RankDto[]>(
-      `/api/ranking/exam/${examId}?limit=3`
-    ).catch(() => []);
-
-    Promise.all([examRequest, questionRequest, rankingRequest])
-      .then(([examRes, questionRes, rankRes]) => {
-        setExam(examRes.data);
-        setPreviewItems((questionRes.data || []).slice(0, 5));
+    let cancelled = false;
+    api<{ data: ExamDetail }>(`/api/exams/${examId}`)
+      .then(async (examRes) => {
+        if (cancelled) return;
+        if (examRes.data.type === "PRACTICAL") {
+          const studyRes = await api<{ data: StudyQuestion[] }>(`/api/exams/${examId}/study`);
+          if (!cancelled) {
+            setStudyItems(studyRes.data);
+            setExam(examRes.data);
+          }
+          return;
+        }
+        const [questionRes, rankRes] = await Promise.all([
+          api<{ data: QuestionRes[] }>(`/api/exams/${examId}/questions`).catch(() => ({ data: [] })),
+          api<RankDto[]>(`/api/ranking/exam/${examId}?limit=3`).catch(() => []),
+        ]);
+        if (cancelled) return;
+        const shuffled = [...(questionRes.data || [])];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        setPreviewItems(shuffled.slice(0, 3));
         setRankingItems(Array.isArray(rankRes) ? rankRes : []);
+        setExam(examRes.data);
       })
       .catch((err) => {
+        if (cancelled) return;
         console.error("시험 정보 로드 실패:", err);
         toast.error("시험 정보를 불러오는 데 실패했습니다.");
         router.push("/");
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [id, router]);
 
   useEffect(() => {
@@ -120,6 +137,22 @@ export default function ExamDetailPage() {
     return (
       <div className="py-20 text-center">
         <p>시험 정보를 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
+
+  if (exam.type === "PRACTICAL") {
+    return (
+      <div className="container space-y-10 py-10">
+        <PracticalStudy
+          key={exam.id}
+          title={exam.title}
+          description={exam.description}
+          seriesName={exam.series?.name}
+          questionCount={exam.questionCount}
+          questions={studyItems}
+        />
+        <RelatedExams items={exam.series ? relatedItems : []} />
       </div>
     );
   }
