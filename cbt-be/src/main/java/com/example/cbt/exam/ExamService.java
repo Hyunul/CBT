@@ -3,6 +3,7 @@ package com.example.cbt.exam;
 import com.example.cbt.attempt.AnswerRepository;
 import com.example.cbt.attempt.AttemptRepository;
 import com.example.cbt.exam.dto.ExamSaveReq;
+import com.example.cbt.exam.dto.StudyQuestionRes;
 import com.example.cbt.exam.series.ExamSeries;
 import com.example.cbt.exam.series.ExamSeriesRepository;
 import com.example.cbt.question.Question;
@@ -55,6 +56,7 @@ public class ExamService {
         Exam.builder()
             .title(req.getTitle())
             .description(req.getDescription())
+            .type(req.getType() == null ? ExamType.WRITTEN : req.getType())
             .durationSec(req.getDurationSec())
             .series(series)
             .round(req.getRound())
@@ -73,6 +75,7 @@ public class ExamService {
     if (req.getTitle() != null) exam.setTitle(req.getTitle());
     if (req.getDescription() != null) exam.setDescription(req.getDescription());
     if (req.getDurationSec() != null) exam.setDurationSec(req.getDurationSec());
+    if (req.getType() != null) exam.setType(req.getType());
     exam.setPublished(req.isPublished());
 
     Long seriesId = req.getSeriesId();
@@ -116,7 +119,7 @@ public class ExamService {
   }
 
   public List<Exam> getBySeriesId(Long seriesId) {
-    return examRepository.findBySeriesIdAndIsPublishedTrueOrderByRoundAsc(seriesId);
+    return examRepository.findBySeriesIdAndIsPublishedTrueOrderByRoundDesc(seriesId);
   }
 
   @Transactional(readOnly = true)
@@ -144,6 +147,27 @@ public class ExamService {
 
   public List<QuestionRes> getQuestions(Long examId) {
     return questionRepository.findByExamId(examId).stream().map(QuestionRes::from).toList();
+  }
+
+  /** 실기 시험만 정답·해설을 공개한다. 필기 정답은 응시 제출 후에만 볼 수 있다. */
+  @Transactional(readOnly = true)
+  public List<StudyQuestionRes> getStudyQuestions(Long examId, boolean admin) {
+    if (getVisible(examId, admin).getType() != ExamType.PRACTICAL)
+      throw new org.springframework.web.server.ResponseStatusException(
+          org.springframework.http.HttpStatus.NOT_FOUND, "실기 시험이 아닙니다.");
+    return questionRepository.findByExamId(examId).stream()
+        .sorted(java.util.Comparator.comparing(Question::getId))
+        .map(
+            q ->
+                new StudyQuestionRes(
+                    q.getId(),
+                    q.getText(),
+                    q.getType().name(),
+                    q.getChoices(),
+                    q.getScore(),
+                    q.correctAnswer(),
+                    q.getExplanation()))
+        .toList();
   }
 
   public List<Question> getQuestionsWithAnswers(Long examId) {

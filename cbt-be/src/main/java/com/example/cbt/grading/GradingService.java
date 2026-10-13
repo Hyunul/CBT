@@ -31,18 +31,7 @@ public class GradingService {
       if (q.getType() == QuestionType.MCQ) {
         isCorrect = q.getAnswerKey() != null && q.getAnswerKey().equals(ans.getSelectedChoices());
       } else {
-        if (q.getAnswerKeywords() != null && !q.getAnswerKeywords().isEmpty()) {
-          String[] keys = q.getAnswerKeywords().split(",");
-          for (String key : keys) {
-            String trimmedKey = key.trim();
-            if (!trimmedKey.isEmpty()
-                && ans.getResponseText() != null
-                && ans.getResponseText().strip().equalsIgnoreCase(trimmedKey)) {
-              isCorrect = true;
-              break;
-            }
-          }
-        }
+        isCorrect = matchesKeyword(q.getAnswerKeywords(), ans.getResponseText());
       }
 
       ans.setIsCorrect(isCorrect);
@@ -52,5 +41,21 @@ public class GradingService {
       totalScore += ans.getScoreAwarded();
     }
     return new GradingResult(totalScore, correctCnt, answers);
+  }
+
+  /** 쉼표로 구분된 정답 후보 중 하나와 일치하면 정답. 정답 자체의 쉼표는 "\," 로 적는다(예: ㄱ\,ㄴ). */
+  static boolean matchesKeyword(String keywords, String response) {
+    if (keywords == null || response == null) return false;
+    String res = normalize(response);
+    for (String key : keywords.split("(?<!\\\\),")) {
+      String k = normalize(key.replace("\\,", ","));
+      if (!k.isEmpty() && k.equalsIgnoreCase(res)) return true;
+    }
+    return false;
+  }
+
+  /** "ㄱ, ㄴ" 과 "ㄱ,ㄴ" 을 같게 본다. */
+  private static String normalize(String s) {
+    return s.strip().replaceAll("\\s*,\\s*", ",");
   }
 }

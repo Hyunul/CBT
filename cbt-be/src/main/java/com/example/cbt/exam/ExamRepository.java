@@ -22,7 +22,7 @@ public interface ExamRepository extends JpaRepository<Exam, Long>, JpaSpecificat
   List<Exam> findBySeriesIdOrderByRoundAsc(Long seriesId);
 
   @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"series"})
-  List<Exam> findBySeriesIdAndIsPublishedTrueOrderByRoundAsc(Long seriesId);
+  List<Exam> findBySeriesIdAndIsPublishedTrueOrderByRoundDesc(Long seriesId);
 
   @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"series"})
   List<Exam> findAllByOrderByIdDesc();

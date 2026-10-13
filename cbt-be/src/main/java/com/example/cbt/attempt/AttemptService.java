@@ -32,6 +32,8 @@ public class AttemptService {
     Exam exam = exams.findLockedById(examId).orElseThrow();
     if (!exam.isPublished())
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "공개된 시험이 아닙니다.");
+    if (exam.getType() == ExamType.PRACTICAL)
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "실기 시험은 모의고사를 지원하지 않습니다.");
     if (questions.findByExamId(examId).isEmpty()) throw new IllegalStateException("문항이 없습니다.");
     return attempts.save(
         Attempt.builder()
@@ -130,7 +132,7 @@ public class AttemptService {
                   q.getChoices(),
                   v == null ? null : v.getSelectedChoices(),
                   v == null ? null : v.getResponseText(),
-                  q.getType() == QuestionType.MCQ ? q.getAnswerKey() : q.getAnswerKeywords(),
+                  q.correctAnswer(),
                   v != null && Boolean.TRUE.equals(v.getIsCorrect()),
                   q.getScore(),
                   q.getExplanation());

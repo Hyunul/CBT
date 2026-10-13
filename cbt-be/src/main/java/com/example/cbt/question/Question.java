@@ -44,4 +44,10 @@ public class Question {
 
   @Column(columnDefinition = "TEXT")
   private String explanation; // 해설
+
+  /** 객관식은 정답 번호, 주관식은 정답 키워드(정답 속 쉼표 "\," 는 ","로 표시). */
+  public String correctAnswer() {
+    if (type == QuestionType.MCQ) return answerKey;
+    return answerKeywords == null ? null : answerKeywords.replace("\\,", ",");
+  }
 }

@@ -15,6 +15,8 @@ public class ExamSaveReq {
   @jakarta.validation.constraints.Max(86400)
   private Integer durationSec;
 
+  private com.example.cbt.exam.ExamType type; // null이면 생성 시 필기, 수정 시 유지
+
   private Long seriesId; // 과목(시리즈) ID
 
   @jakarta.validation.constraints.Min(1)

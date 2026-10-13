@@ -99,7 +99,8 @@ public class SecurityConfig {
                         org.springframework.http.HttpMethod.GET,
                         "/api/exams",
                         "/api/exams/**",
-                        "/api/ranking/**")
+                        "/api/ranking/**",
+                        "/api/question-images/**")
                     .permitAll()
 
                     // --- All other requests must be authenticated ---

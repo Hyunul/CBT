@@ -215,6 +215,30 @@ class PlatformSecurityTests {
   }
 
   @Test
+  void inProgressAttemptHidesAnswer() throws Exception {
+    Guest a = start();
+    mvc.perform(get("/api/attempts/" + a.id).header("X-Attempt-Key", a.key))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.questions[0].correctAnswer").doesNotExist());
+  }
+
+  @Test
+  void studyRevealsAnswersOnlyForPracticalExams() throws Exception {
+    mvc.perform(get("/api/exams/" + exam.getId() + "/study")).andExpect(status().isNotFound());
+    // 분리된 exam(questions=null)을 save하면 orphanRemoval로 문항이 지워지므로 다시 읽는다.
+    exam = exams.findById(exam.getId()).orElseThrow();
+    exam.setType(ExamType.PRACTICAL);
+    exams.save(exam);
+    mvc.perform(get("/api/exams/" + exam.getId() + "/study"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].correctAnswer").value("1"));
+    mvc.perform(post("/api/attempts/start/" + exam.getId())).andExpect(status().isConflict());
+    exam.setPublished(false);
+    exams.save(exam);
+    mvc.perform(get("/api/exams/" + exam.getId() + "/study")).andExpect(status().isNotFound());
+  }
+
+  @Test
   void unpublishedExamIsHidden() throws Exception {
     exam.setPublished(false);
     exams.save(exam);

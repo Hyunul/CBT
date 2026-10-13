@@ -36,6 +36,11 @@ public class Exam {
   @Column(columnDefinition = "TEXT")
   private String description;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  @Builder.Default
+  private ExamType type = ExamType.WRITTEN;
+
   @Formula("(select count(q.id) from questions q where q.exam_id = id)")
   private int questionCount;
 

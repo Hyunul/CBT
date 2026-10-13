@@ -106,6 +106,13 @@ public class ExamController {
     return ApiResponse.ok(examService.getQuestions(id));
   }
 
+  /** 실기 시험 문제 목록 (정답·해설 포함, 실기만 허용) */
+  @GetMapping("/{id}/study")
+  public ApiResponse<List<com.example.cbt.exam.dto.StudyQuestionRes>> study(
+      @PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) {
+    return ApiResponse.ok(examService.getStudyQuestions(id, isAdmin(user)));
+  }
+
   /** 관리자용 문제 목록 조회 (정답 포함) */
   @GetMapping("/{id}/questions/admin")
   public ApiResponse<List<Question>> questionsAdmin(@PathVariable Long id) {
