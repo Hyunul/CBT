@@ -1,87 +1,122 @@
 package com.example.cbt.auth;
 
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import com.example.cbt.auth.dto.LoginRes;
 import com.example.cbt.user.User;
 import com.example.cbt.user.UserRepository;
-
 import io.jsonwebtoken.Claims;
+import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtUtil jwtUtil;
+  private final StringRedisTemplate redis;
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
-    private final StringRedisTemplate redisTemplate;
+  @Value("${jwt.refresh-expiration}")
+  private long refreshExpiration;
 
-    @Value("${jwt.refresh-expiration}")
-    private long refreshExpiration;
+  private static final DefaultRedisScript<Long> ISSUE =
+      new DefaultRedisScript<>(
+          "redis.call('HSET',KEYS[1],'refresh',ARGV[1],'session',ARGV[2]);"
+              + " redis.call('PEXPIRE',KEYS[1],ARGV[3]); return 1",
+          Long.class);
+  private static final DefaultRedisScript<Long> ROTATE =
+      new DefaultRedisScript<>(
+          "if redis.call('HGET',KEYS[1],'refresh') ~= ARGV[1] then return 0 end;"
+              + " redis.call('HSET',KEYS[1],'refresh',ARGV[2]);"
+              + " redis.call('PEXPIRE',KEYS[1],ARGV[3]); return 1",
+          Long.class);
 
-    // [수정됨]: email 대신 username과 password를 파라미터로 받습니다.
-    public LoginRes login(String username, String password) {
-        // [수정됨]: findByEmail 대신 findByUsername 사용
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. (Username 불일치)"));
+  public LoginRes login(String username, String password) {
+    User user = userRepository.findByUsername(username).orElseThrow(this::unauthorized);
+    if (user.getPassword() == null || !passwordEncoder.matches(password, user.getPassword()))
+      throw unauthorized();
+    return issue(user);
+  }
 
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("비밀번호 불일치");
-        }
-        
-        String accessToken = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+  public LoginRes issue(User user) {
+    String session = UUID.randomUUID().toString();
+    LoginRes result = tokens(user, session);
+    redis.execute(
+        ISSUE,
+        List.of(key(user.getId())),
+        result.refreshToken(),
+        session,
+        String.valueOf(refreshExpiration));
+    return result;
+  }
 
-        // Save Refresh Token to Redis
-        redisTemplate.opsForValue().set(
-                "RT:" + user.getId(),
-                refreshToken,
-                refreshExpiration,
-                TimeUnit.MILLISECONDS
-        );
+  private LoginRes tokens(User user, String session) {
+    return new LoginRes(
+        jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name(), session),
+        jwtUtil.generateRefreshToken(user.getId(), session),
+        user.getId(),
+        user.getUsername(),
+        user.getRole().name());
+  }
 
-        return new LoginRes(accessToken, refreshToken, user.getId(), user.getUsername(), user.getRole().name());
-    }
+  public LoginRes refreshToken(String token) {
+    Claims claims = jwtUtil.parse(token, "refresh");
+    Long id = Long.valueOf(claims.getSubject());
+    User user = userRepository.findById(id).orElseThrow(this::unauthorized);
+    LoginRes result = tokens(user, claims.get("session", String.class));
+    Long rotated =
+        redis.execute(
+            ROTATE,
+            List.of(key(id)),
+            token,
+            result.refreshToken(),
+            String.valueOf(refreshExpiration));
+    if (!Long.valueOf(1).equals(rotated)) throw unauthorized();
+    return result;
+  }
 
-    public LoginRes refreshToken(String refreshToken) {
-        // 1. Verify token signature and expiration
-        Claims claims = jwtUtil.parseToken(refreshToken).getBody();
-        String userIdStr = claims.getSubject();
-        Long userId = Long.parseLong(userIdStr);
+  public boolean isActive(Long userId, String session) {
+    return session.equals(redis.opsForHash().get(key(userId), "session"));
+  }
 
-        // 2. Check if token exists in Redis
-        String storedToken = redisTemplate.opsForValue().get("RT:" + userId);
-        if (storedToken == null || !storedToken.equals(refreshToken)) {
-            throw new RuntimeException("유효하지 않은 Refresh Token입니다.");
-        }
+  public void logoutToken(String token) {
+    Claims claims = jwtUtil.parse(token, "refresh");
+    var script =
+        new DefaultRedisScript<Long>(
+            "if redis.call('HGET',KEYS[1],'session') == ARGV[1] then return"
+                + " redis.call('DEL',KEYS[1]) end; return 0",
+            Long.class);
+    redis.execute(
+        script,
+        List.of(key(Long.valueOf(claims.getSubject()))),
+        claims.get("session", String.class));
+  }
 
-        // 3. Find user to get role (needed for new access token)
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+  public String createOAuthCode(Long userId) {
+    String code = UUID.randomUUID().toString();
+    redis.opsForValue().set("oauth:" + code, userId.toString(), Duration.ofSeconds(60));
+    return code;
+  }
 
-        // 4. Generate new Access Token & Refresh Token (RTR)
-        String newAccessToken = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole().name());
-        String newRefreshToken = jwtUtil.generateRefreshToken(user.getId());
+  public LoginRes exchangeOAuthCode(String code) {
+    String id = redis.opsForValue().getAndDelete("oauth:" + code);
+    if (id == null) throw unauthorized();
+    return issue(userRepository.findById(Long.valueOf(id)).orElseThrow(this::unauthorized));
+  }
 
-        // 5. Update Redis with new Refresh Token (Rotate)
-        redisTemplate.opsForValue().set(
-                "RT:" + userId,
-                newRefreshToken,
-                refreshExpiration,
-                TimeUnit.MILLISECONDS
-        );
-        
-        return new LoginRes(newAccessToken, newRefreshToken, user.getId(), user.getUsername(), user.getRole().name());
-    }
+  private String key(Long id) {
+    return "auth:" + id;
+  }
 
-    public void logout(Long userId) {
-        redisTemplate.delete("RT:" + userId);
-    }
+  private ResponseStatusException unauthorized() {
+    return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증 정보가 유효하지 않습니다.");
+  }
 }

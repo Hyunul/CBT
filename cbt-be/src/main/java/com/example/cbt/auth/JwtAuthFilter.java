@@ -1,69 +1,57 @@
 package com.example.cbt.auth;
 
+import com.example.cbt.user.UserRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.*;
+import jakarta.servlet.http.*;
 import java.io.IOException;
-
-import org.springframework.http.HttpHeaders;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.example.cbt.user.User;
-import com.example.cbt.user.UserRepository;
-
-import io.jsonwebtoken.Claims;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
+  private final JwtUtil jwtUtil;
+  private final UserRepository users;
+  private final AuthService authService;
 
-    private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
-        final String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header == null || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = header.substring(7);
-        try {
-            Claims claims = jwtUtil.parseToken(token).getBody();
-            Long userId = Long.valueOf(claims.getSubject());
-
-            User user = userRepository.findById(userId).orElse(null);
-            if (user != null) {
-                CustomUserDetails userDetails = new CustomUserDetails(user);
-
-                log.info("Authenticated User: ID={}, Role={}", user.getId(), user.getRole());
-
-                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken (
-                    userDetails, 
-                    null, 
-                    userDetails.getAuthorities()
-                );
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            } else {
-                log.warn("User not found for ID: {}", userId);
-            }
-        } catch (Exception e) {
-            log.error("JWT Authentication failed: {}", e.getMessage());
-        }
-
-        filterChain.doFilter(request, response);
+  @Override
+  protected void doFilterInternal(
+      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      throws ServletException, IOException {
+    String header = request.getHeader("Authorization");
+    if (header != null && header.startsWith("Bearer ")) {
+      try {
+        Claims claims = jwtUtil.parse(header.substring(7), "access");
+        Long id = Long.valueOf(claims.getSubject());
+        if (!authService.isActive(id, claims.get("session", String.class)))
+          throw new JwtException("Session revoked");
+        CustomUserDetails user =
+            new CustomUserDetails(
+                users.findById(id).orElseThrow(() -> new JwtException("User missing")));
+        SecurityContextHolder.getContext()
+            .setAuthentication(
+                new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+      } catch (JwtException | IllegalArgumentException e) {
+        fail(response, 401, "인증이 만료되었습니다.");
+        return;
+      } catch (DataAccessException e) {
+        fail(response, 503, "인증 서비스를 일시적으로 사용할 수 없습니다.");
+        return;
+      }
     }
+    chain.doFilter(request, response);
+  }
+
+  private void fail(HttpServletResponse response, int status, String message) throws IOException {
+    SecurityContextHolder.clearContext();
+    response.setStatus(status);
+    response.setContentType("application/json;charset=UTF-8");
+    response.getWriter().write("{\"success\":false,\"message\":\"" + message + "\"}");
+  }
 }

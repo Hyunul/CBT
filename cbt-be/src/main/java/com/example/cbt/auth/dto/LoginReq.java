@@ -1,3 +1,5 @@
 package com.example.cbt.auth.dto;
 
-public record LoginReq(String username, String password) {}
+import jakarta.validation.constraints.*;
+
+public record LoginReq(@NotBlank String username, @NotBlank String password) {}

@@ -1,103 +1,77 @@
 package com.example.cbt.attempt;
 
-import java.util.List;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.example.cbt.attempt.dto.*;
+import com.example.cbt.auth.CustomUserDetails;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
+import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.example.cbt.attempt.dto.AnswerReq;
-import com.example.cbt.attempt.dto.AttemptDetailRes;
-import com.example.cbt.attempt.dto.AttemptHistoryDto;
-import com.example.cbt.attempt.dto.AttemptReviewRes;
-import com.example.cbt.attempt.dto.AttemptSubmitRes;
-import com.example.cbt.auth.CustomUserDetails;
-
-import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/attempts")
 public class AttemptController {
+  private final AttemptService service;
 
-    private final AttemptService attemptService;
+  private Long uid(CustomUserDetails u) {
+    return u == null ? null : u.getUserId();
+  }
 
-    // --- 1. 시험 시작 (Attempt 생성) ---
-    @PostMapping("/start/{examId}")
-    public ResponseEntity<Long> startAttempt(
-            @PathVariable Long examId,
-            // CustomUserDetails에서 Long userId를 가져올 수 있다고 가정
-            @AuthenticationPrincipal CustomUserDetails userDetails) { 
+  @PostMapping("/start/{examId}")
+  public ResponseEntity<Long> start(
+      @PathVariable Long examId, @AuthenticationPrincipal CustomUserDetails u) {
+    String key = UUID.randomUUID().toString() + UUID.randomUUID();
+    Attempt a = service.startAttempt(examId, uid(u), key);
+    return u == null
+        ? ResponseEntity.ok().header("X-Attempt-Key", key).body(a.getId())
+        : ResponseEntity.ok(a.getId());
+  }
 
-        Long userId = null;
-        if (userDetails != null) {
-            userId = userDetails.getUserId();
-        }
-        Attempt attempt = attemptService.startAttempt(examId, userId);
-        return ResponseEntity.ok(attempt.getId());
-    }
+  @GetMapping("/{id}")
+  public AttemptDetailRes detail(
+      @PathVariable Long id,
+      @AuthenticationPrincipal CustomUserDetails u,
+      @RequestHeader(value = "X-Attempt-Key", required = false) String key) {
+    return service.getAttemptDetail(id, uid(u), key);
+  }
 
-    private Long getUserId(CustomUserDetails userDetails) {
-        return userDetails != null ? userDetails.getUserId() : null;
-    }
+  @PostMapping("/{id}/answers")
+  public ResponseEntity<Void> save(
+      @PathVariable Long id,
+      @RequestBody @Size(max = 1000) List<@Valid AnswerReq> payload,
+      @AuthenticationPrincipal CustomUserDetails u,
+      @RequestHeader(value = "X-Attempt-Key", required = false) String key) {
+    service.saveAnswers(id, payload, uid(u), key);
+    return ResponseEntity.noContent().build();
+  }
 
-    @PostMapping("/{attemptId}/answers")
-    public ResponseEntity<Void> saveAnswers(
-            @PathVariable Long attemptId,
-            @RequestBody List<AnswerReq> reqList,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        
-        attemptService.saveAnswers(attemptId, reqList, getUserId(userDetails));
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-    
-    // --- 2. Attempt 상세 조회 (시험 진행 화면 로딩) ---
-    @GetMapping("/{attemptId}")
-    public ResponseEntity<AttemptDetailRes> getAttemptDetail(
-            @PathVariable Long attemptId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AttemptDetailRes detail = attemptService.getAttemptDetail(attemptId, getUserId(userDetails));
-        return ResponseEntity.ok(detail);
-    }
+  @PostMapping("/{id}/submit")
+  public AttemptSubmitRes submit(
+      @PathVariable Long id,
+      @AuthenticationPrincipal CustomUserDetails u,
+      @RequestHeader(value = "X-Attempt-Key", required = false) String key,
+      @RequestBody(required = false) @Size(max = 1000) List<@Valid AnswerReq> payload) {
+    return service.submitAndGrade(id, uid(u), key, payload);
+  }
 
-    // --- 3. Attempt 제출 및 채점 ---
-    @PostMapping("/{attemptId}/submit")
-    public ResponseEntity<AttemptSubmitRes> submitAttempt(
-            @PathVariable Long attemptId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        AttemptSubmitRes result = attemptService.submitAndGrade(attemptId, getUserId(userDetails));
-        return ResponseEntity.ok(result);
-    }
+  @GetMapping("/{id}/result")
+  public List<AttemptReviewRes> review(
+      @PathVariable Long id,
+      @AuthenticationPrincipal CustomUserDetails u,
+      @RequestHeader(value = "X-Attempt-Key", required = false) String key) {
+    return service.getReview(id, uid(u), key);
+  }
 
-    // --- 4. 응시 이력 조회 (개인) ---
-    @GetMapping("/history")
-    public ResponseEntity<Page<AttemptHistoryDto>> getAttemptHistory(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PageableDefault(size = 10, sort = "startedAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        
-        if (userDetails == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        Page<AttemptHistoryDto> history = attemptService.getAttemptHistory(userDetails.getUserId(), pageable);
-        return ResponseEntity.ok(history);
-    }
-
-    // --- 5. 시험 결과/오답 리뷰 ---
-    @GetMapping("/{attemptId}/result")
-    public ResponseEntity<List<AttemptReviewRes>> getAttemptReview(
-            @PathVariable Long attemptId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        List<AttemptReviewRes> reviewList = attemptService.getReview(attemptId, getUserId(userDetails));
-        return ResponseEntity.ok(reviewList);
-    }
-
+  @GetMapping("/history")
+  public Page<AttemptHistoryDto> history(
+      @AuthenticationPrincipal CustomUserDetails u,
+      @PageableDefault(size = 10, sort = "startedAt", direction = Sort.Direction.DESC)
+          Pageable page) {
+    return service.getAttemptHistory(u.getUserId(), page);
+  }
 }

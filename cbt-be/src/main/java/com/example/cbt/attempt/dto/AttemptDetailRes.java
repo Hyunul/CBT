@@ -1,5 +1,6 @@
 package com.example.cbt.attempt.dto;
 
+import java.time.Instant;
 import java.util.List;
 
 public record AttemptDetailRes(
@@ -8,13 +9,9 @@ public record AttemptDetailRes(
     String examTitle,
     List<QuestionDto> questions,
     Integer durationSec,
-    java.time.Instant startedAt
-) {
-    public record QuestionDto(
-        Long id,
-        String text,
-        String type,
-        String choices,
-        Integer score
-    ) {}
+    Instant startedAt,
+    Instant serverTime,
+    Instant submittedAt,
+    List<AnswerReq> answers) {
+  public record QuestionDto(Long id, String text, String type, String choices, Integer score) {}
 }
