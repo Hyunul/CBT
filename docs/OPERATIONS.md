@@ -44,8 +44,64 @@ GCP VM 자동 배포에서도 HTTPS 구성을 쓰려면 서버 `.env`에 `COMPOS
 2. 방화벽은 80·443만 전체 공개하고, 22(SSH)는 GitHub Actions 러너 IP가 고정되지 않으므로 키 인증 전용(비밀번호 로그인 비활성)으로 열어 두고, 더 강화하려면 IAP 터널 배포로 전환합니다. 3307 등 DB 포트는 열지 않습니다.
 3. VM에 Docker Engine과 Compose 플러그인을 설치하고 배포 계정을 `docker` 그룹에 추가합니다. 배포용 SSH 키를 VM 메타데이터(또는 `~/.ssh/authorized_keys`)에 등록합니다.
 4. `~/CBT/.env`를 `.env.example` 기준으로 작성합니다. `FRONTEND_URL`은 새 도메인 또는 `http://고정IP`로 지정합니다. 12GB VM에서는 `JAVA_OPTS=-Xms1g -Xmx3g`, `MYSQL_INNODB_BUFFER_POOL_SIZE=3G`로 메모리를 활용합니다.
-5. GitHub production environment secrets에 `GCP_VM_HOST`(고정 IP), `GCP_VM_USERNAME`, `GCP_VM_SSH_KEY`(개인 키), `DOCKER_USERNAME`, `DOCKER_PASSWORD`를 설정합니다. 기존 `EC2_*` secrets는 전환 후 삭제합니다.
+5. GitHub 저장소(또는 production environment) secrets에 `GCP_VM_HOST`(고정 IP), `GCP_VM_USERNAME`, `GCP_VM_SSH_KEY`(개인 키), `DOCKER_USERNAME`, `DOCKER_PASSWORD`를 설정합니다. 기존 `EC2_*` secrets는 전환 후 삭제합니다.
 6. 기존 서버 데이터를 옮길 때는 `mysqldump`로 백업해 새 VM의 DB 컨테이너에 복원한 뒤 첫 배포를 실행합니다. 디스크 스냅샷 일정(일 1회)을 설정해 백업을 자동화합니다.
+
+### 인증서 발급과 자동 갱신 (Let's Encrypt)
+
+도메인 A 레코드가 VM 고정 IP를 가리키는지 확인한 뒤 VM에서 한 번 실행합니다. 발급 동안 Nginx가 잠시 중지됩니다.
+
+```sh
+sudo apt-get install -y certbot
+cd ~/CBT && docker compose stop nginx
+sudo certbot certonly --standalone --agree-tos --register-unsafely-without-email -d 서비스도메인 -d www.서비스도메인
+docker compose start nginx
+```
+
+`~/CBT/.env`에 다음을 추가하고 `FRONTEND_URL=https://서비스도메인`으로 바꾼 뒤 서비스를 다시 올립니다. 수동으로 올릴 때는 실행 중인 이미지와 같은 `DOCKER_USERNAME`, `IMAGE_TAG`를 지정해야 다른 이미지로 바뀌지 않습니다.
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.https.yml
+TLS_CERTIFICATE=/etc/letsencrypt/live/서비스도메인/fullchain.pem
+TLS_PRIVATE_KEY=/etc/letsencrypt/live/서비스도메인/privkey.pem
+```
+
+```sh
+export DOCKER_USERNAME=도커허브아이디 IMAGE_TAG=$(docker inspect -f '{{.Config.Image}}' cbt-backend-1 | cut -d: -f2)
+docker compose up -d --no-build --wait
+```
+
+갱신은 certbot 패키지의 systemd 타이머가 수행합니다. standalone 방식은 80 포트가 필요하므로 갱신 전후 훅으로 Nginx를 멈추고 새 인증서로 다시 만듭니다(약 10~20초 중단).
+
+```sh
+printf '#!/bin/sh\ncd /home/deploy/CBT && docker compose stop nginx\n' | sudo tee /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh
+printf '#!/bin/sh\ncd /home/deploy/CBT && docker compose up -d --no-deps --force-recreate nginx\n' | sudo tee /etc/letsencrypt/renewal-hooks/post/start-nginx.sh
+sudo chmod 755 /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh /etc/letsencrypt/renewal-hooks/post/start-nginx.sh
+sudo certbot renew --dry-run
+```
+
+`--force-recreate`는 인증서 심볼릭 링크를 새 파일로 다시 마운트하기 위해 필요합니다. 훅의 "error output" 경고는 Compose 진행 메시지가 stderr로 출력된 것입니다.
+
+### 운영 DB 접근
+
+DB 포트는 외부에 공개하지 않습니다. 접근은 SSH를 거칩니다.
+
+- 터미널: VM에 SSH 접속 후 앱 계정으로 접속합니다.
+
+  ```sh
+  cd ~/CBT && docker compose exec db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u "$MYSQL_USER" cbt_platform'
+  ```
+
+- GUI 도구(DBeaver, MySQL Workbench 등): VM의 `~/CBT/docker-compose.override.yml`에 DB 포트를 VM 내부(127.0.0.1)에만 열고 `COMPOSE_FILE` 끝에 `:docker-compose.override.yml`을 추가합니다. 도구에서 SSH 터널(호스트: VM 고정 IP, 사용자: `deploy`, 배포 키)을 설정하고 DB 호스트 `127.0.0.1`, 포트 `3307`, 사용자 `cbt_user`, 비밀번호는 VM `.env`의 `DB_PASSWORD`로 접속합니다.
+
+  ```yaml
+  services:
+    db:
+      ports:
+        - "127.0.0.1:3307:3306"
+  ```
+
+운영 데이터를 수정하기 전에는 `mysqldump`로 백업하고, 조회 목적이면 읽기 전용 계정을 따로 만들어 사용합니다.
 
 Nginx는 Docker DNS를 주기적으로 조회해 재생성된 앱 컨테이너의 주소를 반영합니다. 수동 배포에서 Nginx 설정 파일을 수정했다면 `docker compose exec -T nginx nginx -t`로 검사한 후 `docker compose exec -T nginx nginx -s reload`를 실행합니다. 자동 배포는 이 단계를 포함합니다.
 
