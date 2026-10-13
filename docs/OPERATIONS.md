@@ -40,10 +40,10 @@ GCP VM 자동 배포에서도 HTTPS 구성을 쓰려면 서버 `.env`에 `COMPOS
 
 ### GCP VM 준비
 
-1. Compute Engine VM을 만듭니다. 권장: `e2-standard-2`(vCPU 2, 8GB), 리전 `asia-northeast3`(서울), Ubuntu LTS, 디스크 30GB `pd-balanced`. 외부 IP는 고정(정적) IP로 예약합니다.
-2. 방화벽은 80·443만 전체 공개하고, 22(SSH)는 GitHub Actions와 관리자 IP로 제한하거나 IAP를 사용합니다. 3307 등 DB 포트는 열지 않습니다.
+1. Compute Engine VM을 만듭니다. 권장: E2 맞춤형 vCPU 2·메모리 12GB, 리전 `asia-northeast3`(서울), Ubuntu LTS, 디스크 50GB `pd-balanced`. 외부 IP는 고정(정적) IP로 예약합니다.
+2. 방화벽은 80·443만 전체 공개하고, 22(SSH)는 GitHub Actions 러너 IP가 고정되지 않으므로 키 인증 전용(비밀번호 로그인 비활성)으로 열어 두고, 더 강화하려면 IAP 터널 배포로 전환합니다. 3307 등 DB 포트는 열지 않습니다.
 3. VM에 Docker Engine과 Compose 플러그인을 설치하고 배포 계정을 `docker` 그룹에 추가합니다. 배포용 SSH 키를 VM 메타데이터(또는 `~/.ssh/authorized_keys`)에 등록합니다.
-4. `~/CBT/.env`를 `.env.example` 기준으로 작성합니다. `FRONTEND_URL`은 새 도메인 또는 `http://고정IP`로 지정합니다.
+4. `~/CBT/.env`를 `.env.example` 기준으로 작성합니다. `FRONTEND_URL`은 새 도메인 또는 `http://고정IP`로 지정합니다. 12GB VM에서는 `JAVA_OPTS=-Xms1g -Xmx3g`, `MYSQL_INNODB_BUFFER_POOL_SIZE=3G`로 메모리를 활용합니다.
 5. GitHub production environment secrets에 `GCP_VM_HOST`(고정 IP), `GCP_VM_USERNAME`, `GCP_VM_SSH_KEY`(개인 키), `DOCKER_USERNAME`, `DOCKER_PASSWORD`를 설정합니다. 기존 `EC2_*` secrets는 전환 후 삭제합니다.
 6. 기존 서버 데이터를 옮길 때는 `mysqldump`로 백업해 새 VM의 DB 컨테이너에 복원한 뒤 첫 배포를 실행합니다. 디스크 스냅샷 일정(일 1회)을 설정해 백업을 자동화합니다.
 
