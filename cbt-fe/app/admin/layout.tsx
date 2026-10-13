@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuth } from "@/store/useAuth";
+import { loginHref } from "@/lib/login-return";
 
 type Props = {
   children: React.ReactNode;
@@ -19,7 +20,7 @@ export default function AdminLayout({ children }: Props) {
     // 인증 안 됨: 로그인 페이지로 이동
     if (!token) {
       toast.error("로그인이 필요합니다.");
-      router.replace("/login");
+      router.replace(loginHref(window.location.pathname + window.location.search));
       return;
     }
 

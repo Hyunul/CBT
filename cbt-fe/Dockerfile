@@ -4,6 +4,7 @@ FROM base AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json ./
+COPY tools/next-root-glob ./tools/next-root-glob
 RUN npm ci
 
 FROM base AS builder
@@ -12,7 +13,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Accept the build argument and set it as an environment variable
-ARG NEXT_PUBLIC_API_URL
+ARG INTERNAL_API_URL=http://backend:8080
+ENV INTERNAL_API_URL=$INTERNAL_API_URL
+ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build

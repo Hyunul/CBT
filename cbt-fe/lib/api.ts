@@ -1,163 +1,111 @@
 import { useAuth } from "@/store/useAuth";
+import { apiUrl } from "@/lib/api-url";
+export { API_BASE } from "@/lib/api-url";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
-// Interface for common Spring Pageable response
 export interface Page<T> {
   content: T[];
-  pageable: {
-    pageNumber: number;
-    pageSize: number;
-    sort: {
-      empty: boolean;
-      sorted: boolean;
-      unsorted: boolean;
-    };
-    offset: number;
-    paged: boolean;
-    unpaged: boolean;
-  };
   totalPages: number;
   totalElements: number;
-  last: boolean;
-  size: number;
   number: number;
-  sort: {
-    empty: boolean;
-    sorted: boolean;
-    unsorted: boolean;
-  };
-  first: boolean;
-  numberOfElements: number;
-  empty: boolean;
+  size: number;
 }
-
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-
-  // Prevent double /api if API_BASE ends with /api and path starts with /api
-  let cleanPath = path;
-  if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
-      cleanPath = path.substring(4);
-  } else if (API_BASE.endsWith("/") && path.startsWith("/api/")) {
-      // Prevent double slashes e.g. https://domain.com//api/...
-       cleanPath = path.substring(1);
+export interface LoginData {
+  accessToken: string;
+  refreshToken: string;
+  userId: number;
+  username: string;
+  role: string;
+}
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
   }
-
-  const res = await fetch(`${API_BASE}${cleanPath}`, {
-    ...init,
-    headers,
-  });
-
-  // 401 Unauthorized handling (Token Expiration)
-  if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      const refreshToken = localStorage.getItem("refreshToken");
-      
-      // Only attempt refresh if we have a refresh token and this wasn't already a refresh attempt
-      if (refreshToken && !path.includes("/auth/refresh")) {
-        try {
-          // Construct refresh URL correctly
-          let refreshPath = "/api/auth/refresh";
-          if (API_BASE.endsWith("/api")) {
-            refreshPath = "/auth/refresh";
-          } else if (API_BASE.endsWith("/")) {
-             refreshPath = "api/auth/refresh";
-          }
-
-          const refreshRes = await fetch(`${API_BASE}${refreshPath}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refreshToken }),
-          });
-
-          if (refreshRes.ok) {
-            const data = await refreshRes.json();
-            
-            // Check response structure (ApiResponse<LoginRes>)
-            if (data.success && data.data) {
-              const { accessToken, refreshToken: newRefreshToken, id, username, role } = data.data;
-
-              // 1. Update LocalStorage
-              localStorage.setItem("token", accessToken);
-              if (newRefreshToken) {
-                localStorage.setItem("refreshToken", newRefreshToken);
-              }
-              
-              // 2. Update Zustand Store
-              useAuth.getState().login(
-                accessToken,
-                newRefreshToken || refreshToken,
-                id,
-                username,
-                role
-              );
-              
-              // 3. Retry the original request with new token
-              const newHeaders = {
-                ...headers,
-                Authorization: `Bearer ${accessToken}`,
-              };
-
-              const retryRes = await fetch(`${API_BASE}${cleanPath}`, {
-                ...init,
-                headers: newHeaders,
-              });
-
-              // Return the retry result directly
-              if (retryRes.ok) {
-                 return retryRes.json();
-              }
-              
-              // If retry fails (e.g. 403 or 404), throw error based on retryRes
-              // Fall through to error handling below logic
-               const retryErrorJson = await retryRes.json().catch(() => ({}));
-               throw new Error(retryErrorJson.message || "Retried request failed");
-            }
-          }
-        } catch (refreshError) {
-          console.error("Token refresh failed:", refreshError);
-        }
-      }
-
-      // If refresh failed or no refresh token, logout
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("username");
-      localStorage.removeItem("role");
-      window.location.href = "/login";
-      // Return null or throw to stop execution
-      throw new Error("Session expired. Please login again.");
-    }
-  }
-
-  if (!res.ok) {
-    
-    let errorMessage = "Request failed";
+}
+let refreshing: Promise<void> | null = null;
+async function read<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  let data: unknown = null;
+  if (text) {
     try {
-        const errorJson = await res.json();
-        if (errorJson && errorJson.message) {
-            errorMessage = errorJson.message;
-        }
-    } catch (e) {
-        const text = await res.text();
-        if (text) errorMessage = text;
+      data = JSON.parse(text);
+    } catch {
+      if (res.ok)
+        throw new ApiError("서버 응답 형식이 올바르지 않습니다.", res.status);
     }
-    throw new Error(errorMessage);
   }
-  
-  const contentLength = res.headers.get("Content-Length");
-  if (contentLength && parseInt(contentLength) === 0) {
-      return null as T;
+  if (!res.ok) {
+    const message =
+      data &&
+      typeof data === "object" &&
+      "message" in data &&
+      typeof data.message === "string"
+        ? data.message
+        : "요청을 처리하지 못했습니다.";
+    throw new ApiError(message, res.status);
   }
-
-  return res.json();
+  return data as T;
+}
+async function refresh(): Promise<void> {
+  const token = localStorage.getItem("refreshToken");
+  if (!token) throw new ApiError("로그인이 필요합니다.", 401);
+  const res = await fetch(apiUrl("/api/auth/refresh"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken: token }),
+  });
+  const { data } = await read<{ data: LoginData }>(res);
+  useAuth
+    .getState()
+    .login(
+      data.accessToken,
+      data.refreshToken,
+      data.userId,
+      data.username,
+      data.role,
+    );
+}
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const browser = typeof window !== "undefined";
+  const authEndpoint = path.startsWith("/api/auth/");
+  const send = () => {
+    const headers = new Headers(init.headers);
+    if (init.body && !headers.has("Content-Type"))
+      headers.set("Content-Type", "application/json");
+    const token =
+      browser && !authEndpoint ? localStorage.getItem("token") : null;
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    const attempt = path.match(/^\/api\/attempts\/(\d+)(?:\/|$)/);
+    const guestKey =
+      browser && attempt
+        ? localStorage.getItem(`attempt-key:${attempt[1]}`)
+        : null;
+    if (guestKey) headers.set("X-Attempt-Key", guestKey);
+    return fetch(apiUrl(path), { ...init, headers });
+  };
+  let res = await send();
+  if (res.status === 401 && browser && !authEndpoint) {
+    try {
+      if (!refreshing)
+        refreshing = refresh().finally(() => {
+          refreshing = null;
+        });
+      await refreshing;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        useAuth.getState().clear();
+      }
+      throw error;
+    }
+    res = await send();
+  }
+  const data = await read<T>(res);
+  const guestKey = res.headers.get("X-Attempt-Key");
+  if (browser && guestKey && typeof data === "number")
+    localStorage.setItem(`attempt-key:${data}`, guestKey);
+  return data;
 }
 
 export interface User {
@@ -197,33 +145,63 @@ export interface ExamListRes {
 }
 
 export async function getExamList(): Promise<ExamListRes> {
-  const res = await api<{ success: boolean; data: ExamListRes }>("/api/exams/list");
+  const res = await api<{ success: boolean; data: ExamListRes }>(
+    "/api/exams/list",
+  );
   return res.data;
 }
 
 export async function getSeriesList(): Promise<ExamSeries[]> {
-  const res = await api<{ success: boolean; data: ExamSeries[] }>("/api/series");
+  const res = await api<{ success: boolean; data: ExamSeries[] }>(
+    "/api/series",
+  );
   return res.data;
 }
 
-export async function createSeries(name: string, description: string): Promise<ExamSeries> {
+export async function createSeries(
+  name: string,
+  description: string,
+): Promise<ExamSeries> {
   const res = await api<{ success: boolean; data: ExamSeries }>("/api/series", {
-      method: "POST",
-      body: JSON.stringify({ name, description }),
+    method: "POST",
+    body: JSON.stringify({ name, description }),
   });
   return res.data;
 }
 
-export async function updateSeries(id: number, name: string, description: string): Promise<ExamSeries> {
-  const res = await api<{ success: boolean; data: ExamSeries }>(`/api/series/${id}`, {
+export async function updateSeries(
+  id: number,
+  name: string,
+  description: string,
+): Promise<ExamSeries> {
+  const res = await api<{ success: boolean; data: ExamSeries }>(
+    `/api/series/${id}`,
+    {
       method: "PUT",
       body: JSON.stringify({ name, description }),
-  });
+    },
+  );
   return res.data;
 }
 
-export async function deleteSeries(id: number, force: boolean = false): Promise<void> {
+export async function deleteSeries(
+  id: number,
+  force: boolean = false,
+): Promise<void> {
   await api(`/api/series/${id}?force=${force}`, {
-      method: "DELETE",
+    method: "DELETE",
   });
+}
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "요청에 실패했습니다.";
+}
+export interface EditableQuestion {
+  text: string;
+  type: string;
+  choices?: string;
+  answerKey?: string;
+  answerKeywords?: string;
+  score: number;
+  tags: string;
+  explanation: string;
 }

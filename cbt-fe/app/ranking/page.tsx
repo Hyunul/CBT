@@ -16,7 +16,7 @@ export default function RankingPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRanking, setSelectedRanking] = useState("global");
-  const [rankingTitle, setRankingTitle] = useState("글로벌 응시 횟수 랭킹");
+  const rankingTitle = selectedRanking === "global" ? "글로벌 응시 횟수 랭킹" : exams.find(e=>String(e.id)===selectedRanking)?.title ?? "선택된 시험";
 
   /** -------------------------------
    *  시험 목록 로딩 (Spring Pageable 대응)
@@ -40,24 +40,11 @@ export default function RankingPage() {
    *  랭킹 로딩 (배열 또는 pageable 둘 다 대응)
    * ------------------------------- */
   useEffect(() => {
-    setLoading(true);
-
-    let url = "";
-    if (selectedRanking === "global") {
-      url = "/api/ranking/global/submissions";
-      setRankingTitle("글로벌 응시 횟수 랭킹");
-    } else {
-      url = `/api/ranking/exam/${selectedRanking}`;
-
-      const examTitle = exams.find(
-        (e) => e.id.toString() === selectedRanking
-      )?.title;
-
-      setRankingTitle(`${examTitle || "선택된 시험"}`);
-    }
-
+    const url = selectedRanking === "global" ? "/api/ranking/global/submissions" : `/api/ranking/exam/${selectedRanking}`;
+    let active = true;
     api<RankDto[]>(url)
       .then((res) => {
+        if(!active) return;
         // Backend's RankingController directly returns List<RankDto>, not ApiResponse<List<RankDto>>
         // So 'res' itself is the List<RankDto> array.
         // No need for 'res.data'
@@ -74,8 +61,9 @@ export default function RankingPage() {
         setRankings([]);
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [selectedRanking, exams]);
+      .finally(() => {if(active) setLoading(false);});
+    return ()=>{active=false;};
+  }, [selectedRanking]);
 
   /** ------------------------------- */
   /** 스타일 함수 */
@@ -93,14 +81,17 @@ export default function RankingPage() {
     <div className="container max-w-5xl mx-auto py-12 px-4">
       {/* 헤더 */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b pb-4">
-        <h1 className="text-4xl font-extrabold text-gray-900">
+        <h1 className="min-w-0 text-2xl sm:text-4xl font-extrabold text-gray-900">
           {rankingTitle}
         </h1>
 
+        <div className="w-full sm:w-80 sm:shrink-0">
+        <label htmlFor="ranking-filter" className="mb-2 block text-sm font-medium">랭킹 기준</label>
         <select
+          id="ranking-filter"
           value={selectedRanking}
-          onChange={(e) => setSelectedRanking(e.target.value)}
-          className="w-full sm:w-80 p-3 border border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-700 font-medium"
+          onChange={(e) => {setLoading(true);setSelectedRanking(e.target.value);}}
+          className="input w-full p-3 font-medium"
         >
           <option value="global">글로벌 응시 횟수 랭킹</option>
 
@@ -110,27 +101,28 @@ export default function RankingPage() {
             </option>
           ))}
         </select>
+        </div>
       </div>
 
       {/* 테이블 */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl shadow-xl overflow-x-auto">
         {loading ? (
           <div className="flex justify-center items-center h-96">
-            <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
         ) : rankings.length === 0 ? (
           <p className="text-center py-20 text-gray-500 text-xl font-medium">
             현재 표시할 랭킹 데이터가 없습니다.
           </p>
         ) : (
-          <table className="w-full text-left table-auto">
-            <thead className="bg-indigo-50 border-b border-indigo-200">
+          <table className="w-full text-left table-fixed">
+            <thead className="bg-primary/5 border-b border-primary/20">
               <tr>
-                <th className="p-4 w-24 text-center text-indigo-700 font-semibold">
+                <th className="p-2 sm:p-4 w-16 sm:w-24 whitespace-nowrap text-center text-primary font-semibold">
                   순위
                 </th>
-                <th className="p-4 text-indigo-700 font-semibold">사용자</th>
-                <th className="p-4 w-32 text-right text-indigo-700 font-semibold">
+                <th className="p-2 sm:p-4 text-primary font-semibold">사용자</th>
+                <th className="p-2 sm:p-4 w-24 sm:w-32 whitespace-nowrap text-right text-primary font-semibold">
                   {getScoreLabel}
                 </th>
               </tr>
@@ -142,24 +134,24 @@ export default function RankingPage() {
                   key={user.userId}
                   className="border-b last:border-none hover:bg-gray-50 transition"
                 >
-                  <td className="p-4 font-bold text-lg text-center">
+                  <td className="p-2 sm:p-4 font-bold text-lg text-center">
                     <div
-                      className={`flex justify-center items-center gap-2 p-2 rounded-lg ${getRankColor(
+                      className={`flex justify-center items-center gap-1 sm:gap-2 sm:p-2 rounded-lg ${getRankColor(
                         user.rank
                       )}`}
                     >
                       {user.rank <= 3 && (
-                        <Crown className="w-5 h-5 fill-current" />
+                        <Crown className="w-4 h-4 shrink-0 sm:w-5 sm:h-5 fill-current" />
                       )}
                       {user.rank}
                     </div>
                   </td>
 
-                  <td className="p-4 font-semibold text-gray-800">
-                    {user.username}
+                  <td className="p-2 sm:p-4 font-semibold text-gray-800">
+                    <span className="block truncate" title={user.username}>{user.username}</span>
                   </td>
 
-                  <td className="p-4 text-right font-mono text-xl text-gray-900 font-bold">
+                  <td className="p-2 sm:p-4 whitespace-nowrap text-right font-mono text-lg sm:text-xl text-gray-900 font-bold">
                     {(user.score ?? 0).toLocaleString()}
                   </td>
                 </tr>

@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import ToastProvider from "@/components/ToastProvider";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
 
 
 export const metadata: Metadata = {
@@ -18,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko" className={inter.className}>
+    <html lang="ko">
       <body className="antialiased">
         <div className="relative flex min-h-screen flex-col bg-background">
           <Navbar />

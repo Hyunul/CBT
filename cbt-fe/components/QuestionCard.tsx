@@ -15,6 +15,7 @@ interface QuestionCardProps {
   qNumber: number;
   value: string | undefined;
   onChange: (value: string) => void;
+  headingRef?: React.Ref<HTMLHeadingElement>;
 }
 
 export default function QuestionCard({
@@ -22,6 +23,7 @@ export default function QuestionCard({
   qNumber,
   value,
   onChange,
+  headingRef,
 }: QuestionCardProps) {
   let choicesArray: [string, string][] = [];
 
@@ -38,20 +40,23 @@ export default function QuestionCard({
         return keyA.localeCompare(keyB);
       });
     } catch (e) {
-      console.error(`Question ${q.id} 선택지 JSON 파싱 오류:`, e);
+      console.error(`문제 ${q.id} 선택지 JSON 파싱 오류:`, e);
     }
   }
 
   return (
-    <div className="bg-card border rounded-lg p-6">
+    <div className="min-w-0 bg-card border rounded-lg p-4 sm:p-6">
       <div className="mb-6">
-        <p className="text-sm font-semibold text-primary mb-2">Question {qNumber}</p>
-        <div className="bg-slate-900 text-slate-50 p-5 rounded-lg font-mono text-base whitespace-pre-wrap border border-slate-800 shadow-sm leading-relaxed">
+        <h2 ref={headingRef} id={`question-${q.id}-title`} tabIndex={-1} style={{ scrollMarginTop: "calc(var(--navbar-height) + var(--attempt-header-height, 10rem) + 1rem)" }} className="text-sm font-semibold text-primary mb-2">
+          문제 {qNumber}
+        </h2>
+        <div id={`question-${q.id}-text`} className="wrap-break-word text-card-foreground text-base whitespace-pre-wrap leading-relaxed">
           {q.text}
         </div>
       </div>
 
       {q.type === "MCQ" ? (
+        <fieldset aria-labelledby={`question-${q.id}-title question-${q.id}-text`} className="min-w-0">
         <ul className="space-y-3">
           {choicesArray.map(([key, text]) => (
             <li
@@ -62,25 +67,32 @@ export default function QuestionCard({
                   : "hover:bg-accent"
               }`}
             >
-              <label className="flex items-center gap-4 p-4 cursor-pointer">
+              <label htmlFor={`q-${q.id}-choice-${key}`} className="flex items-center gap-4 p-4 cursor-pointer">
                 <input
+                  id={`q-${q.id}-choice-${key}`}
                   type="radio"
                   name={`q-${q.id}`}
-                  className="h-4 w-4 text-primary focus:ring-primary border-muted"
+                  value={key}
+                  className="h-4 w-4 shrink-0 text-primary focus:ring-primary border-muted"
                   checked={value === key}
                   onChange={() => onChange(key)}
                 />
-                <span className="font-medium text-card-foreground">{text}</span>
+                <span className="min-w-0 wrap-break-word font-medium text-card-foreground">
+                  {text}
+                </span>
               </label>
             </li>
           ))}
         </ul>
+        </fieldset>
       ) : (
         <div>
-          <p className="text-sm font-semibold text-primary mb-2">Your Answer</p>
+          <p className="text-sm font-semibold text-primary mb-2">답안</p>
           <textarea
+            aria-label="답안"
+            aria-describedby={`question-${q.id}-text`}
             className="input w-full h-32"
-            placeholder="답변을 입력하세요..."
+            placeholder="답안을 입력하세요..."
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}
           />

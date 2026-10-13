@@ -1,63 +1,44 @@
 "use client";
-
-import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/store/useAuth";
-import { jwtDecode } from "jwt-decode";
+import { api, LoginData } from "@/lib/api";
 import toast from "react-hot-toast";
-
-function CallbackContent() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const { login } = useAuth();
-
-    useEffect(() => {
-        const accessToken = searchParams.get("accessToken");
-        const refreshToken = searchParams.get("refreshToken");
-
-        if (accessToken && refreshToken) {
-            try {
-                const decoded: any = jwtDecode(accessToken);
-                // decoded: { sub: "userId", username: "...", role: "...", iat: ..., exp: ... }
-                
-                const userId = Number(decoded.sub);
-                const username = decoded.username;
-                const role = decoded.role;
-
-                login(accessToken, refreshToken, userId, username, role);
-                
-                toast.success("로그인 성공!");
-                router.push("/");
-            } catch (e) {
-                console.error("Token decode failed", e);
-                toast.error("로그인 처리 중 오류가 발생했습니다.");
-                router.push("/login");
-            }
-        } else {
-             // If no token, maybe wait a bit or redirect (could be slow loading?)
-             // But if we are here, we expect tokens.
-             // If manual navigation without params, go back to login.
-             const timeout = setTimeout(() => {
-                 if (!accessToken) router.push("/login");
-             }, 1000);
-             return () => clearTimeout(timeout);
-        }
-    }, [searchParams, router, login]);
-
-    return (
-        <div className="flex h-screen items-center justify-center">
-            <div className="text-center">
-                <h2 className="text-xl font-semibold mb-2">로그인 처리 중...</h2>
-                <p className="text-muted-foreground">잠시만 기다려주세요.</p>
-            </div>
-        </div>
-    );
-}
-
+import { clearOAuthReturn, loginHref, readOAuthReturn } from "@/lib/login-return";
 export default function CallbackPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <CallbackContent />
-        </Suspense>
-    );
+  const router = useRouter();
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    const code = new URLSearchParams(window.location.hash.slice(1)).get("code");
+    window.history.replaceState(null, "", window.location.pathname);
+    if (!code) {
+      router.replace(loginHref(readOAuthReturn()));
+      return;
+    }
+    api<{ data: LoginData }>("/api/auth/oauth/exchange", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    })
+      .then(({ data }) => {
+        useAuth
+          .getState()
+          .login(
+            data.accessToken,
+            data.refreshToken,
+            data.userId,
+            data.username,
+            data.role,
+          );
+        const returnPath = readOAuthReturn();
+        clearOAuthReturn();
+        router.replace(returnPath);
+      })
+      .catch(() => {
+        toast.error("로그인을 완료하지 못했습니다. 다시 시도해주세요.");
+        router.replace(loginHref(readOAuthReturn()));
+      });
+  }, [router]);
+  return <div className="p-12 text-center">로그인 처리 중...</div>;
 }

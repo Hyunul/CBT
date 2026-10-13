@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api, getSeriesList, ExamSeries } from "@/lib/api";
+import { api, getSeriesList, ExamSeries, Exam } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -11,7 +11,6 @@ export default function NewExamPage() {
     // 상태값들
     const [title, setTitle] = useState("");
     const [durationSec, setDurationSec] = useState(600);
-    const [published, setPublished] = useState(false);
     
     // 시리즈 관련
     const [seriesList, setSeriesList] = useState<ExamSeries[]>([]);
@@ -24,12 +23,12 @@ export default function NewExamPage() {
 
     const createExam = async () => {
         try {
-            const res = await api<{ data: any }>("/api/exams", {
+            const res = await api<{ data: Exam }>("/api/exams", {
                 method: "POST",
                 body: JSON.stringify({
                     title,
                     durationSec,
-                    isPublished: published,
+                    isPublished: false,
                     seriesId: selectedSeriesId,
                     round: round === "" ? null : Number(round),
                 }),
@@ -51,7 +50,7 @@ export default function NewExamPage() {
             <div>
                 <label className="block font-semibold mb-1">시험 제목</label>
                 <input
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded-sm"
                     placeholder="예) 2025 NCS 직업기초능력 시험"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -62,7 +61,7 @@ export default function NewExamPage() {
             <div>
                 <label className="block font-semibold mb-1">시리즈(과목) 선택 (선택)</label>
                 <select 
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded-sm"
                     value={selectedSeriesId || ""}
                     onChange={(e) => setSelectedSeriesId(e.target.value ? Number(e.target.value) : null)}
                 >
@@ -73,7 +72,7 @@ export default function NewExamPage() {
                         </option>
                     ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">시리즈가 없다면 '시리즈 관리'에서 먼저 생성하세요.</p>
+                <p className="text-xs text-gray-500 mt-1">시리즈가 없다면 시리즈 관리에서 먼저 생성하세요.</p>
             </div>
 
             {/* 회차 */}
@@ -81,7 +80,7 @@ export default function NewExamPage() {
                 <label className="block font-semibold mb-1">회차 (선택)</label>
                 <input
                     type="number"
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded-sm"
                     placeholder="예) 1"
                     value={round}
                     onChange={(e) => setRound(e.target.value === "" ? "" : Number(e.target.value))}
@@ -95,23 +94,13 @@ export default function NewExamPage() {
                 </label>
                 <input
                     type="number"
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded-sm"
                     value={durationSec}
                     onChange={(e) => setDurationSec(Number(e.target.value))}
                 />
             </div>
 
-            {/* 옵션 */}
-            <div className="flex gap-10 items-center">
-                <label className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        checked={published}
-                        onChange={() => setPublished(!published)}
-                    />
-                    공개 여부
-                </label>
-            </div>
+            <p className="text-sm text-gray-500">문항을 저장한 뒤 시험을 공개할 수 있습니다.</p>
 
             {/* 버튼 */}
             <button

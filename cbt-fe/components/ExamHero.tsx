@@ -5,6 +5,8 @@ interface ExamHeroProps {
   description?: string;
   badges?: string[];
   starting: boolean;
+  questionCount: number;
+  durationSec: number;
   onStart: () => void;
 }
 
@@ -13,10 +15,12 @@ export default function ExamHero({
   description,
   badges = [],
   starting,
+  questionCount,
+  durationSec,
   onStart,
 }: ExamHeroProps) {
   return (
-    <section className="rounded-2xl border bg-card p-8 shadow-sm">
+    <section className="rounded-2xl border bg-card p-8 shadow-xs">
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
           {badges.map((badge) => (
@@ -38,18 +42,23 @@ export default function ExamHero({
         ) : null}
       </div>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div id="exam-start-info" className="mt-6 space-y-2 text-sm text-muted-foreground">
+        <p>총 {questionCount}문항 · 제한 시간 {Math.floor(durationSec / 60)}분{durationSec % 60 ? ` ${durationSec % 60}초` : ""} · 시간 종료 시 자동 제출됩니다.</p>
+        <p>회원은 나의 응시 이력에서 기록을 확인할 수 있습니다. 게스트는 같은 브라우저에서만 결과를 확인할 수 있으며 브라우저 저장소를 지우면 접근할 수 없습니다.</p>
+      </div>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button
           className="btn-primary flex w-full items-center justify-center gap-2 py-3 text-base font-bold sm:w-auto"
           onClick={onStart}
           disabled={starting}
+          aria-describedby="exam-start-info"
         >
           {starting ? (
             "시작 중..."
           ) : (
             <>
               <PlayCircle className="h-5 w-5" />
-              무료로 시작하기
+              시험 시작
             </>
           )}
         </button>

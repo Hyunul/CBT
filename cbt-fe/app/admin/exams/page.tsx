@@ -79,7 +79,7 @@ export default function AdminExamList() {
                 </select>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
+            <div className="bg-white p-6 rounded-xl shadow-xs space-y-4">
                 {filteredExams.length > 0 ? (
                     filteredExams.map((exam) => (
                         <div
@@ -95,7 +95,7 @@ export default function AdminExamList() {
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         {exam.series && (
-                                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                                                 {exam.series.name}
                                             </span>
                                         )}

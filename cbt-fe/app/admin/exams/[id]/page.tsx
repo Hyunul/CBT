@@ -1,31 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { useParams } from "next/navigation";
-import { useAuth } from "@/store/useAuth";
+import { api, Exam } from "@/lib/api";
+import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function ExamDetailPage() {
+    const router=useRouter();
     const { id } = useParams(); // ←★ 여기
-    const [exam, setExam] = useState<any>(null);
-    const { userId } = useAuth();
+    const [exam, setExam] = useState<Exam | null>(null);
 
     useEffect(() => {
         if (!id) return;
 
-        api<{ data: any }>(`/api/exams/${id}`)
+        api<{ data: Exam }>(`/api/exams/${id}`)
             .then((res) => setExam(res.data))
             .catch((err) => console.error(err));
     }, [id]);
 
     const startExam = async () => {
         try {
-            const res = await api<{ data: any }>("/api/attempts", {
-                method: "POST",
-                body: JSON.stringify({ examId: exam.id, userId }),
-            });
-            window.location.href = `/attempts/${res.data.id}`;
+            const attemptId = await api<number>(`/api/attempts/start/${exam!.id}`, { method: "POST" });
+            router.push(`/attempts/${attemptId}`);
         } catch (err) {
             console.error("Failed to start exam:", err);
             toast.error("응시 시작에 실패했습니다. 다시 시도해주세요.");
@@ -40,8 +36,8 @@ export default function ExamDetailPage() {
             <p className="text-gray-600 mb-4">
                 총점: {exam.totalScore}점 | 제한시간: {exam.durationSec}초
             </p>
-            <button className="btn-primary" onClick={startExam}>
-                시험 시작
+            <button className="btn-primary disabled:opacity-50" disabled={!exam.isPublished} onClick={startExam}>
+                {exam.isPublished ? "시험 시작" : "시험을 공개한 후 응시할 수 있습니다."}
             </button>
         </main>
     );

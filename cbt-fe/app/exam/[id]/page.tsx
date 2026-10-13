@@ -55,7 +55,6 @@ export default function ExamDetailPage() {
     const examId = Array.isArray(id) ? id[0] : id;
     if (!examId) return;
 
-    setLoading(true);
 
     const examRequest = api<{ data: ExamDetail }>(`/api/exams/${examId}`);
     const questionRequest = api<{ data: QuestionRes[] }>(
@@ -81,7 +80,6 @@ export default function ExamDetailPage() {
 
   useEffect(() => {
     if (!exam?.series?.id) {
-      setRelatedItems([]);
       return;
     }
 
@@ -110,7 +108,7 @@ export default function ExamDetailPage() {
     }
   };
 
-  if (loading) {
+  if (loading || (exam && String(exam.id) !== String(id))) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -141,6 +139,8 @@ export default function ExamDetailPage() {
         }
         badges={badges}
         starting={starting}
+        questionCount={exam.questionCount}
+        durationSec={exam.durationSec}
         onStart={startExam}
       />
 
@@ -158,7 +158,7 @@ export default function ExamDetailPage() {
         }))}
       />
 
-      <RelatedExams items={relatedItems} />
+      <RelatedExams items={exam.series ? relatedItems : []} />
 
       <ExamFAQ />
     </div>
