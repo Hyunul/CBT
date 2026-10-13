@@ -1,89 +1,81 @@
-version: "3.8"
-
 services:
-  # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
-    container_name: cbt-nginx
+    image: nginx:stable-alpine
     ports:
-      - "80:80"
-      # Cloudflare 'Flexible' 모드 사용 시 443 포트는 열어두지 않아도 되지만, 
-      # 나중에 'Full' 모드로 전환할 계획이 있다면 유지해도 무방합니다.
-      - "443:443" 
+      - "${HTTP_PORT:-80}:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    # 인증서 갱신 로직이 필요 없으므로 기본 커맨드로 단순화합니다.
-    command: nginx -g "daemon off;"
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - backend
-      - frontend
-    restart: always
-
-  # Certbot 서비스는 더 이상 필요 없으므로 삭제되었습니다.
-
-  # 1. MySQL Database
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    restart: unless-stopped
   db:
     image: mysql:8.0
-    container_name: cbt-mysql
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_DATABASE: cbt_platform
       MYSQL_USER: cbt_user
-      MYSQL_PASSWORD: cbt_password
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
-    restart: always
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-proot_password"]
-      timeout: 20s
-      retries: 10
-
-  # 2. Redis Cache & Ranking Store
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
   redis:
     image: redis:7-alpine
-    container_name: cbt-redis
-    ports:
-      - "6379:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    restart: always
-
-  # 3. Spring Boot Backend Application
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
   backend:
-    build:
-      context: ./cbt-be
-      dockerfile: Dockerfile
-    image: ${DOCKER_USERNAME}/cbt-backend:latest
-    container_name: cbt-backend
+    build: ./cbt-be
+    image: ${DOCKER_USERNAME:-cbt}/cbt-backend:${IMAGE_TAG:-local}
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root_password
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: cbt_user
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       SPRING_DATA_REDIS_HOST: redis
-      JAVA_OPTS: "-Xms512m -Xmx1024m"
-      CORS_ALLOWED_ORIGINS: "*"
+      JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET of at least 32 bytes}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      CORS_ALLOWED_ORIGINS: ${FRONTEND_URL:-http://localhost}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
+      JAVA_OPTS: -Xms256m -Xmx768m
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
-    restart: always
-
-  # 4. Next.js Frontend Application
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 40s
+    restart: unless-stopped
   frontend:
-    image: ${DOCKER_USERNAME}/cbt-frontend:latest
-    container_name: cbt-frontend
-    environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
-      INTERNAL_API_URL: http://backend:8080
-    depends_on:
-      - backend
-    restart: always
-
+    build:
+      context: ./cbt-fe
+      args:
+        INTERNAL_API_URL: http://backend:8080
+    image: ${DOCKER_USERNAME:-cbt}/cbt-frontend:${IMAGE_TAG:-local}
+    restart: unless-stopped
 volumes:
   mysql_data:
   redis_data:

@@ -1,138 +1,117 @@
-name: Deploy to EC2 with Docker
-
+name: Validate and deploy
 on:
+  pull_request:
   push:
-    branches: ["main"]
-
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: true
-
+  cancel-in-progress: false
 jobs:
-  build-and-push:
+  backend-checks:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew && ./gradlew test bootJar --no-daemon
+        working-directory: cbt-be
+  frontend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cbt-fe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: cbt-fe/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run audit
+  integration-checks:
+    needs: [backend-checks, frontend-checks]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create disposable environment
+        run: |
+          python3 - <<'PY'
+          import os, secrets
+          from pathlib import Path
+          content = '\n'.join([
+            'DB_PASSWORD=' + secrets.token_hex(24),
+            'DB_ROOT_PASSWORD=' + secrets.token_hex(24),
+            'JWT_SECRET=' + secrets.token_hex(32),
+            'HTTP_PORT=18080',
+            'FRONTEND_URL=http://localhost:18080',
+          ])
+          Path(os.environ['RUNNER_TEMP'], 'cbt.env').write_text(content)
+          PY
+      - run: docker compose --env-file "$RUNNER_TEMP/cbt.env" -p cbt-validation-ci up -d --build --wait --wait-timeout 240
+      - run: python3 scripts/smoke_test.py --env-file "$RUNNER_TEMP/cbt.env" --project cbt-validation-ci
+      - name: Clean disposable stack
+        if: always()
+        run: docker compose --env-file "$RUNNER_TEMP/cbt.env" -p cbt-validation-ci down --volumes
+  build-and-push:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [integration-checks]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Backend
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v6
         with:
           context: ./cbt-be
-          file: ./cbt-be/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/cbt-backend:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-backend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-backend:buildcache,mode=max
-
-      - name: Build and push Frontend
-        uses: docker/build-push-action@v5
+          tags: ${{ secrets.DOCKER_USERNAME }}/cbt-backend:${{ github.sha }}
+      - uses: docker/build-push-action@v6
         with:
           context: ./cbt-fe
-          file: ./cbt-fe/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/cbt-frontend:latest
-          build-args: |
-            NEXT_PUBLIC_API_URL=https://www.hyunul.shop
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cbt-frontend:buildcache,mode=max
-
+          tags: ${{ secrets.DOCKER_USERNAME }}/cbt-frontend:${{ github.sha }}
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
+    environment: production
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Fix permissions on EC2
-        uses: appleboy/ssh-action@v1.2.0
+      - uses: actions/checkout@v4
+      - uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          source: docker-compose.yml,docker-compose.https.yml,nginx
+          target: ~/CBT
+      - uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DOCKER_USERNAME,IMAGE_TAG
           script: |
-            sudo mkdir -p /home/${{ secrets.EC2_USERNAME }}/CBT
-            sudo chown -R $(whoami) /home/${{ secrets.EC2_USERNAME }}/CBT
-            sudo chmod -R u+w /home/${{ secrets.EC2_USERNAME }}/CBT
-
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yml,nginx,init-letsencrypt.sh"
-          target: "/home/${{ secrets.EC2_USERNAME }}/CBT"
-
-      - name: Setup Swap Memory
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Check if swap exists
-            if [ $(swapon --show | wc -l) -eq 0 ]; then
-              echo "Creating 2GB swap file..."
-              sudo fallocate -l 2G /swapfile
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile
-              sudo swapon /swapfile
-              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-              echo "Swap created successfully."
-            else
-              echo "Swap already exists."
-            fi
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -euo pipefail
-
-            cd /home/${{ secrets.EC2_USERNAME }}/CBT
-
-            COMPOSE="docker compose"
-            echo "Using Compose command: sudo $COMPOSE"
-
-            touch .env
-
-            upsert_env () {
-              local key="$1"
-              local val="$2"
-              if grep -q "^${key}=" .env; then
-                sed -i "s|^${key}=.*|${key}=${val}|" .env
-              else
-                echo "${key}=${val}" >> .env
-              fi
-            }
-
-            upsert_env "DOCKER_USERNAME" "${{ secrets.DOCKER_USERNAME }}"
-            # Use EC2_HOST to construct the API URL
-            upsert_env "NEXT_PUBLIC_API_URL" "https://www.hyunul.shop"
-
-            echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-            sudo $COMPOSE pull
-
-            sudo $COMPOSE up -d --remove-orphans
-
-            sudo docker image prune -f
+            set -eu
+            cd ~/CBT
+            test -f .env
+            docker compose config --quiet
+            docker compose pull
+            docker compose up -d --no-build --wait --wait-timeout 240
+            docker compose exec -T nginx nginx -t
+            docker compose exec -T nginx nginx -s reload

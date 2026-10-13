@@ -5,3 +5,10 @@
 .env
 .env.local
 *.log
+.env.*
+!.env.example
+
+.playwright-cli/
+output/playwright/
+
+docker-compose.override.yml

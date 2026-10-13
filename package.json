@@ -1,1 +1,10 @@
-{}
+{
+  "name": "cbt-platform",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix cbt-fe run dev",
+    "build": "npm --prefix cbt-fe run build",
+    "test": "npm --prefix cbt-fe test",
+    "lint": "npm --prefix cbt-fe run lint"
+  }
+}
