@@ -12,7 +12,7 @@ interface AttemptHistory {
   examTitle: string;
   submissionDate: string;
   finalScore: number | null;
-  status: string;
+  status: "GRADED" | "IN_PROGRESS" | "EXPIRED";
 }
 
 export default function MyHistoryPage() {
@@ -121,7 +121,7 @@ export default function MyHistoryPage() {
                   <h2 className="min-w-0 flex-1 basis-48 text-xl font-semibold text-gray-800">
                     {attempt.examTitle}
                   </h2>
-                  {attempt.finalScore !== null ? (
+                  {attempt.status === "GRADED" && attempt.finalScore !== null ? (
                     <span
                       className={`shrink-0 whitespace-nowrap font-bold text-lg ${
                         attempt.finalScore >= 60
@@ -145,13 +145,13 @@ export default function MyHistoryPage() {
                     <span
                       className={`whitespace-nowrap font-semibold ${attempt.status === "GRADED" ? "text-green-600" : "text-yellow-600"}`}
                     >
-                      {attempt.status === "GRADED" ? "채점 완료" : "진행중"}
+                      {attempt.status === "GRADED" ? "채점 완료" : attempt.status === "EXPIRED" ? "시간 종료" : "진행중"}
                     </span>
                   </div>
                 </div>
-                {attempt.status === "IN_PROGRESS" && (
-                  <Link href={`/attempts/${attempt.attemptId}`} className="btn-primary inline-block text-sm font-semibold">
-                    이어서 응시
+                {(attempt.status === "IN_PROGRESS" || attempt.status === "EXPIRED") && (
+                  <Link href={`/attempts/${attempt.attemptId}`} className="btn-primary inline-block whitespace-nowrap text-sm font-semibold">
+                    {attempt.status === "EXPIRED" ? "제출 완료하기" : "이어서 응시"}
                   </Link>
                 )}
                 {attempt.status === "GRADED" && (
