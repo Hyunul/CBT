@@ -60,7 +60,7 @@ k6 run -e BASE_URL=http://127.0.0.1:18081 -e EXAM_ID=24 -e RATE=50 loadtest/star
 
 **수정**: `hibernate.jdbc.batch_size=50`, `order_updates`, MySQL URL에 `rewriteBatchedStatements=true`(이 옵션이 없으면 드라이버가 배치를 한 문장씩 보냅니다).
 
-**DB 왕복 수**(Hibernate 세션 통계로 확인)
+**쓰기 문장(INSERT·UPDATE)의 DB 왕복 수**(Hibernate 세션 통계로 확인). 같은 요청의 잠금 조회·SELECT·COMMIT은 배치 대상이 아니라 그대로입니다.
 
 | 요청 | 이전 | 이후 |
 | --- | --- | --- |
