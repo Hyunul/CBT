@@ -25,6 +25,10 @@ QSTART = re.compile(r"^(\d{1,3})\.\s*(.*)$")
 SUBJECT = re.compile(r"^(\d)과목\s*:\s*(.+)$")
 MID_X = 298  # 2단 편집: 왼쪽 단 / 오른쪽 단 경계
 BOARD_URL = "https://www.comcbt.com/xe/%s"
+# 원본 PDF 자체의 오타 보정: (종목, 회차, 번호) → (틀린 문구, 고친 문구)
+TYPOS = {
+    ("정보보안기사", "2019-13", 3): ("어느에 저장되는가", "어느 파일에 저장되는가"),
+}
 
 
 HANGUL = re.compile("[가-힣]")
@@ -235,6 +239,10 @@ def run(src, out, images_dir, cert, board, prefix):
                 report.append("%s Q%d: 보기 %d개 또는 빈 보기" % (key, q["no"], len(q["choices"])))
             if "전자문제집" in q["text"] + "".join(q["choices"]):
                 report.append("%s Q%d: 사이트 안내문이 문항에 섞임" % (key, q["no"]))
+            typo = TYPOS.get((cert, key, q["no"]))
+            if typo:
+                assert typo[0] in q["text"], (key, q["no"], typo)  # 원본이 바뀌면 보정도 다시 본다
+                q["text"] = q["text"].replace(*typo)
             result.append(to_question(q, key, ans, cert))
         nums = [q["no"] for q in qs]
         if nums != list(range(1, len(nums) + 1)) or len(nums) != 100:
