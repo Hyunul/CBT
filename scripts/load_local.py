@@ -5,6 +5,7 @@
   python scripts/load_local.py --print        # 실행할 SQL만 출력
   python scripts/load_local.py --replace      # 이 시리즈(응시 기록 포함)를 지우고 다시 삽입
   python scripts/load_local.py --kind written # 필기(scripts/parse_comcbt.py 결과)
+  python scripts/load_local.py --kind security-written   # 정보보안기사 필기
   python scripts/load_local.py --kind written --update-content   # 응시 기록 유지, 문항 내용만 갱신
   python scripts/load_local.py --env-file test.env -p cbt-validation-local   # 임시 검증 스택
 
@@ -29,6 +30,13 @@ KINDS = {
         "dir": "scraped/written", "type": "WRITTEN", "series": "정보처리기사 필기",
         "series_desc": "2020년 개편 이후 정보처리기사 필기 기출문제(전자문제집 CBT 교사용 자료)",
         "title": "정보처리기사 필기 %s년 %s회",
+        "desc": "출처: 전자문제집 CBT %s",
+        "merged12": True,  # 파일 2020-12 = 2020년 1·2회 통합 시행
+    },
+    "security-written": {  # scripts/download_comcbt.py → parse_comcbt.py --cert 정보보안기사 결과
+        "dir": "scraped/written-sec", "type": "WRITTEN", "series": "정보보안기사 필기",
+        "series_desc": "정보보안기사 필기 기출문제 1~21회(전자문제집 CBT 교사용 자료)",
+        "title": "정보보안기사 필기 %s년 %s회",
         "desc": "출처: 전자문제집 CBT %s",
     },
 }
@@ -58,9 +66,15 @@ def delete_sql(SERIES):
     ]
 
 
+def round_order(kind, key):
+    """파일 이름 <연도>-<회차> 의 시행 순서(문자열 정렬은 2017-10 이 2017-9 앞에 온다)."""
+    year, rnd = key.split("-")
+    return int(year), 1.5 if KINDS[kind].get("merged12") and rnd == "12" else int(rnd)
+
+
 def exam_title(kind, key):
     year, rnd = key.split("-")
-    rnd = "1·2" if rnd == "12" else rnd  # 2020년 1·2회 통합 시행
+    rnd = "1·2" if KINDS[kind].get("merged12") and rnd == "12" else rnd
     return KINDS[kind]["title"] % (year, rnd)
 
 
@@ -133,7 +147,8 @@ if __name__ == "__main__":
 
     SERIES = KINDS[args.kind]["series"]
     src = args.dir or KINDS[args.kind]["dir"]
-    files = sorted(glob.glob(os.path.join(src, "*-*.json")))
+    files = sorted(glob.glob(os.path.join(src, "*-*.json")),
+                   key=lambda f: round_order(args.kind, os.path.basename(f)[:-5]))
     if not files:
         sys.exit("%s/*.json 이 없습니다. 스크래핑·파싱 스크립트를 먼저 실행하세요." % src)
     rounds = [(os.path.basename(f)[:-5], json.load(open(f, encoding="utf-8"))) for f in files]

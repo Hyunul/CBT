@@ -8,6 +8,7 @@
 두 정답을 대조해 다르면 review.txt 에 남긴다.
 
   python scripts/parse_comcbt.py
+  python scripts/parse_comcbt.py --cert 정보보안기사 --board ccw --src scraped/comcbt-sec --out scraped/written-sec --prefix sec
   python scripts/parse_comcbt.py --self-test
 """
 import argparse
@@ -23,7 +24,7 @@ MARK = re.compile("[%s%s]" % (PLAIN, FILLED))
 QSTART = re.compile(r"^(\d{1,3})\.\s*(.*)$")
 SUBJECT = re.compile(r"^(\d)과목\s*:\s*(.+)$")
 MID_X = 298  # 2단 편집: 왼쪽 단 / 오른쪽 단 경계
-SOURCE = "https://www.comcbt.com/xe/iz"
+BOARD_URL = "https://www.comcbt.com/xe/%s"
 
 
 HANGUL = re.compile("[가-힣]")
@@ -188,21 +189,23 @@ def parse(doc, render_image):
     return questions, answer_table(table_text)
 
 
-def to_question(q, key, answer):
+def to_question(q, key, answer, cert="정보처리기사"):
     text = re.sub(r"\n{3,}", "\n\n", q["text"]).strip()
     return {
         "text": text,
         "type": "MCQ",
-        "choices": json.dumps({str(i + 1): c.strip() for i, c in enumerate(q["choices"])}, ensure_ascii=False),
+        # 보기 전체가 표 이미지인 문항은 ①~④ 표시만 텍스트라 보기가 비어 있다 → 번호로 채운다
+        "choices": json.dumps({str(i + 1): c.strip() or PLAIN[i] for i, c in enumerate(q["choices"])},
+                              ensure_ascii=False),
         "answerKey": str(answer) if answer else None,
         "answerKeywords": None,
         "score": 1,
-        "tags": ",".join(["정보처리기사", "필기", key] + ([q["subject"]] if q["subject"] else [])),
+        "tags": ",".join([cert, "필기", key] + ([q["subject"]] if q["subject"] else [])),
         "explanation": None,
     }
 
 
-def run(src, out, images_dir):
+def run(src, out, images_dir, cert, board, prefix):
     os.makedirs(out, exist_ok=True)
     os.makedirs(images_dir, exist_ok=True)
     report = []
@@ -213,7 +216,7 @@ def run(src, out, images_dir):
 
         def render(rect, page, no):
             n = counter[no] = counter.get(no, 0) + 1
-            name = "w%s_q%03d_%d.png" % (key, no, n)
+            name = "%s%s_q%03d_%d.png" % (prefix, key, no, n)
             page.get_pixmap(clip=rect, matrix=fitz.Matrix(2, 2)).save(os.path.join(images_dir, name))
             return "[이미지: %s]" % name
 
@@ -225,16 +228,17 @@ def run(src, out, images_dir):
                 report.append("%s Q%d: 표시 정답 %d ≠ 정답표 %d" % (key, q["no"], q["marked"], table[q["no"]]))
             if not ans:
                 report.append("%s Q%d: 정답 없음" % (key, q["no"]))
-            if len(q["choices"]) != 4 or not all(c.strip() for c in q["choices"]):
+            empty = not all(c.strip() for c in q["choices"])
+            if len(q["choices"]) != 4 or (empty and "[이미지:" not in q["text"]):
                 report.append("%s Q%d: 보기 %d개 또는 빈 보기" % (key, q["no"], len(q["choices"])))
             if "전자문제집" in q["text"] + "".join(q["choices"]):
                 report.append("%s Q%d: 사이트 안내문이 문항에 섞임" % (key, q["no"]))
-            result.append(to_question(q, key, ans))
+            result.append(to_question(q, key, ans, cert))
         nums = [q["no"] for q in qs]
         if nums != list(range(1, len(nums) + 1)) or len(nums) != 100:
             report.append("%s: 문항 번호 %d개, 불연속 여부 확인" % (key, len(nums)))
         with open(os.path.join(out, key + ".json"), "w", encoding="utf-8") as f:
-            json.dump({"source": SOURCE, "questions": result}, f, ensure_ascii=False, indent=2)
+            json.dump({"source": BOARD_URL % board, "questions": result}, f, ensure_ascii=False, indent=2)
         print("%s: %d문항, 이미지 %d개" % (key, len(result), sum(counter.values())))
     with open(os.path.join(out, "review.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(report) + "\n")
@@ -307,6 +311,9 @@ if __name__ == "__main__":
     ap.add_argument("--src", default="scraped/comcbt")
     ap.add_argument("--out", default="scraped/written")
     ap.add_argument("--images", default="question-images")
+    ap.add_argument("--cert", default="정보처리기사", help="태그에 넣을 종목명")
+    ap.add_argument("--board", default="iz", help="출처 게시판(comcbt.com/xe/<board>)")
+    ap.add_argument("--prefix", default="w", help="이미지 파일 이름 접두어(종목끼리 겹치지 않게)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
-    self_test() if a.self_test else run(a.src, a.out, a.images)
+    self_test() if a.self_test else run(a.src, a.out, a.images, a.cert, a.board, a.prefix)
