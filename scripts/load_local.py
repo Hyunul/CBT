@@ -4,6 +4,7 @@
   python scripts/load_local.py                # 시리즈 1개 + 회차별 시험 + 문제 삽입
   python scripts/load_local.py --print        # 실행할 SQL만 출력
   python scripts/load_local.py --replace      # 이 시리즈(응시 기록 포함)를 지우고 다시 삽입
+  python scripts/load_local.py --kind written # 필기(scripts/parse_comcbt.py 결과)
   python scripts/load_local.py --env-file test.env -p cbt-validation-local   # 임시 검증 스택
 
 관리자 로그인 없이 db 컨테이너의 mysql로 직접 넣는다(scripts/smoke_test.py 와 같은 방식).
@@ -16,7 +17,20 @@ import os
 import subprocess
 import sys
 
-SERIES = "정보처리기사 실기 (복원)"
+KINDS = {
+    "practical": {
+        "dir": "scraped", "type": "PRACTICAL", "series": "정보처리기사 실기 (복원)",
+        "series_desc": "chobopark.tistory.com 복원 문제(CC BY 4.0, 저작자 Life-Journey)",
+        "title": "정보처리기사 실기 %s년 %s회 (복원)",
+        "desc": "출처: Life-Journey, %s (CC BY 4.0)\n수험생 기억 기반 복원 문제로 실제 시험과 다를 수 있습니다.",
+    },
+    "written": {  # scripts/parse_comcbt.py 결과
+        "dir": "scraped/written", "type": "WRITTEN", "series": "정보처리기사 필기",
+        "series_desc": "2020년 개편 이후 정보처리기사 필기 기출문제(전자문제집 CBT 교사용 자료)",
+        "title": "정보처리기사 필기 %s년 %s회",
+        "desc": "출처: 전자문제집 CBT %s",
+    },
+}
 DURATION_SEC = 150 * 60
 MYSQL = ["exec", "-T", "db", "sh", "-c",
          'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u "$MYSQL_USER" --default-character-set=utf8mb4 -N cbt_platform']
@@ -31,7 +45,7 @@ def q(v):
     return "'" + str(v).replace("\\", "\\\\").replace("'", "''") + "'"
 
 
-def delete_sql():
+def delete_sql(SERIES):
     """이 시리즈와 그 시험의 응시 기록·문제를 모두 지운다(--replace)."""
     exams = "SELECT e.id FROM exams e JOIN exam_series s ON s.id=e.series_id WHERE s.name=%s" % q(SERIES)
     return [
@@ -43,18 +57,18 @@ def delete_sql():
     ]
 
 
-def build_sql(rounds, replace=False):
-    out = ["START TRANSACTION;"] + (delete_sql() if replace else []) + [
+def build_sql(rounds, kind, replace=False):
+    k = KINDS[kind]
+    out = ["START TRANSACTION;"] + (delete_sql(k["series"]) if replace else []) + [
            "INSERT INTO exam_series(name, description, created_at, updated_at) VALUES (%s, %s, NOW(6), NOW(6));"
-           % (q(SERIES), q("chobopark.tistory.com 복원 문제(CC BY 4.0, 저작자 Life-Journey)")),
+           % (q(k["series"]), q(k["series_desc"])),
            "SET @s = LAST_INSERT_ID();"]
     for no, (key, data) in enumerate(rounds, 1):
         year, rnd = key.split("-")
-        desc = ("출처: Life-Journey, %s (CC BY 4.0)\n수험생 기억 기반 복원 문제로 실제 시험과 다를 수 있습니다."
-                % data["source"])
+        rnd = "1·2" if rnd == "12" else rnd  # 2020년 1·2회 통합 시행
         out.append("INSERT INTO exams(series_id, round, title, description, duration_sec, type, is_published,"
-                   " created_at, updated_at) VALUES (@s, %d, %s, %s, %d, 'PRACTICAL', 1, NOW(6), NOW(6));"
-                   % (no, q("정보처리기사 실기 %s년 %s회 (복원)" % (year, rnd)), q(desc), DURATION_SEC))
+                   " created_at, updated_at) VALUES (@s, %d, %s, %s, %d, %s, 1, NOW(6), NOW(6));"
+                   % (no, q(k["title"] % (year, rnd)), q(k["desc"] % data["source"]), DURATION_SEC, q(k["type"])))
         out.append("SET @e = LAST_INSERT_ID();")
         rows = ["(@e, %s, %s, %s, %s, %s, %s, %s, %s)" % (
             q(x["type"]), q(x["text"]), q(x["choices"]), q(x["answerKey"]), q(x["answerKeywords"]),
@@ -72,7 +86,8 @@ def mysql(sql):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default="scraped")
+    ap.add_argument("--kind", choices=sorted(KINDS), default="practical")
+    ap.add_argument("--dir", help="기본값: 종류별 scraped 디렉터리")
     ap.add_argument("--print", action="store_true")
     ap.add_argument("--replace", action="store_true", help="기존 시리즈(응시 기록 포함)를 지우고 다시 넣는다")
     ap.add_argument("--env-file", help="임시 검증 스택용 env 파일")
@@ -83,11 +98,13 @@ if __name__ == "__main__":
     if args.project:
         COMPOSE += ["-p", args.project]
 
-    files = sorted(glob.glob(os.path.join(args.dir, "*-*.json")))
+    SERIES = KINDS[args.kind]["series"]
+    src = args.dir or KINDS[args.kind]["dir"]
+    files = sorted(glob.glob(os.path.join(src, "*-*.json")))
     if not files:
-        sys.exit("%s/*.json 이 없습니다. scrape_chobopark.py 를 먼저 실행하세요." % args.dir)
+        sys.exit("%s/*.json 이 없습니다. 스크래핑·파싱 스크립트를 먼저 실행하세요." % src)
     rounds = [(os.path.basename(f)[:-5], json.load(open(f, encoding="utf-8"))) for f in files]
-    sql = build_sql(rounds, args.replace)
+    sql = build_sql(rounds, args.kind, args.replace)
     assert q("a'b\\,c") == "'a''b\\\\,c'"  # 작은따옴표·백슬래시 이스케이프
 
     if args.print:
