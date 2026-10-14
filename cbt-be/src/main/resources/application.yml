@@ -4,6 +4,15 @@ spring:
     data:
         redis:
             timeout: 3000
+    jpa:
+        properties:
+            hibernate:
+                # 채점·자동 저장의 답안 UPDATE 를 묶어 보낸다. MySQL 은 URL 의 rewriteBatchedStatements=true 가 있어야
+                # 실제로 왕복이 줄어든다. 답안 INSERT 는 IDENTITY 키라 Hibernate 가 배치하지 않는다.
+                jdbc:
+                    batch_size: 50
+                order_updates: true
+                order_inserts: true
 jwt:
     secret: ${JWT_SECRET}
     expiration: 900000

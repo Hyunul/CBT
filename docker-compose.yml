@@ -43,7 +43,7 @@ services:
     image: ${DOCKER_USERNAME:-cbt}/cbt-backend:${IMAGE_TAG:-local}
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cbt_platform?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&rewriteBatchedStatements=true
       SPRING_DATASOURCE_USERNAME: cbt_user
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       SPRING_DATA_REDIS_HOST: redis

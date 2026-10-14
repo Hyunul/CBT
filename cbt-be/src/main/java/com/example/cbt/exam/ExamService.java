@@ -124,7 +124,10 @@ public class ExamService {
 
   @Transactional(readOnly = true)
   public List<Exam> getPopularExams() {
-    return examRepository.findTop10ByIsPublishedTrueOrderByAttemptCountDesc();
+    List<Long> ids = examRepository.findPopularIds(org.springframework.data.domain.PageRequest.of(0, 10));
+    java.util.Map<Long, Exam> byId = new java.util.HashMap<>();
+    examRepository.findAllById(ids).forEach(e -> byId.put(e.getId(), e));
+    return ids.stream().map(byId::get).toList(); // findAllById 는 순서를 보장하지 않으므로 집계 순서로 되돌린다
   }
 
   @Transactional(readOnly = true)

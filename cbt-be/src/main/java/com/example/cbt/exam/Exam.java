@@ -44,9 +44,6 @@ public class Exam {
   @Formula("(select count(q.id) from questions q where q.exam_id = id)")
   private int questionCount;
 
-  @Formula("(select count(a.id) from attempts a where a.exam_id = id)")
-  private int attemptCount;
-
   private Integer durationSec; // 시험 시간(초)
 
   @Formula("(select coalesce(sum(q.score), 0) from questions q where q.exam_id = id)")

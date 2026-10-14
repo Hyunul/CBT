@@ -264,6 +264,21 @@ class PlatformSecurityTests {
   }
 
   @Test
+  void popularExamsAreOrderedByAttemptCount() throws Exception {
+    Exam busy = exams.save(Exam.builder().title("인기").durationSec(600).isPublished(true).build());
+    Exam hidden = exams.save(Exam.builder().title("비공개").durationSec(600).isPublished(false).build());
+    for (int i = 0; i < 3; i++) attempts.save(Attempt.builder().exam(busy).build());
+    attempts.save(Attempt.builder().exam(exam).build());
+    for (int i = 0; i < 5; i++) attempts.save(Attempt.builder().exam(hidden).build()); // 비공개는 제외
+    mvc.perform(get("/api/exams/list"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.popularExams.length()").value(2))
+        .andExpect(jsonPath("$.data.popularExams[0].title").value("인기"))
+        .andExpect(jsonPath("$.data.popularExams[1].title").value("Test"))
+        .andExpect(jsonPath("$.data.popularExams[0].attemptCount").doesNotExist());
+  }
+
+  @Test
   void unpublishedExamIsHidden() throws Exception {
     exam.setPublished(false);
     exams.save(exam);

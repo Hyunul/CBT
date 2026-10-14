@@ -128,7 +128,6 @@ export interface Exam {
   author: User; // Changed from createdBy: number
   createdAt: string;
   updatedAt: string;
-  attemptCount: number;
   round?: number;
   series?: {
     id: number;
