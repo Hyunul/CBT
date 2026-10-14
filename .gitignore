@@ -16,3 +16,4 @@ docker-compose.override.yml
 scraped/
 question-images/
 loadtest/results/
+.playwright-mcp/
