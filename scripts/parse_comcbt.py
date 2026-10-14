@@ -160,7 +160,9 @@ def parse(doc, render_image):
             edge = 23 if col == 0 else 305
             m = QSTART.match(t.lstrip())  # 끝 공백은 남겨야 다음 줄과 띄어 잇는다
             if m and abs(x - edge) < 4 and (cur is None or int(m.group(1)) == cur["no"] + 1):
-                cur = {"no": int(m.group(1)), "subject": subject, "text": m.group(2), "choices": [], "marked": None,
+                # 문항 첫 줄의 채움 번호는 정답 표시가 아니라 본문(예: '제17조 ①항')을 교사용이 채운 것이다
+                text = m.group(2).translate(str.maketrans(FILLED, PLAIN))
+                cur = {"no": int(m.group(1)), "subject": subject, "text": text, "choices": [], "marked": None,
                        "imgs": [], "marks": []}
                 questions.append(cur)
                 target = None
@@ -264,7 +266,7 @@ def self_test():
     lines = [(23, 100, "1과목 : 소프트웨어 설계"), (23, 120, "1. 다음 중 틀린 것은?"),
              (23, 135, "   ① 객체 간의 동적 상호작용을 나"), (50, 147, "타낸다."),
              (23, 160, "   ❷ 정적 측면   ③ 셋째"), (23, 175, "   ④ 넷째"),
-             (305, 100, "2. 둘째 문제는?"), (305, 115, "   ❶ 가   ② 나"), (305, 130, "   ③ 다   ④ 라")]
+             (305, 100, "2. 제17조 ❶항 둘째 문제는?"), (305, 115, "   ❶ 가   ② 나"), (305, 130, "   ③ 다   ④ 라")]
     for x, y, t in lines:
         p.insert_text((x, y), t, fontname="k", fontsize=8)
     last = doc.new_page(width=595, height=841)
@@ -301,7 +303,7 @@ def self_test():
     assert [c.strip() for c in qs[2]["choices"]] == ["10", "20", "30", "40"] and qs[2]["marked"] == 3, qs[2]
     assert qs[0]["subject"] == "소프트웨어 설계"
     assert [c.strip() for c in qs[0]["choices"]] == ["객체 간의 동적 상호작용을 나타낸다.", "정적 측면", "셋째", "넷째"], qs[0]["choices"]
-    assert qs[0]["marked"] == 2 and qs[1]["marked"] == 1
+    assert qs[0]["marked"] == 2 and qs[1]["marked"] == 1 and qs[1]["text"].strip() == "제17조 ①항 둘째 문제는?"
     assert table == {1: 2, 2: 1, 3: 3, 4: 2, 5: 1}, table
     print("self-test ok")
 
