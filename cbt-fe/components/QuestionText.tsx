@@ -15,9 +15,10 @@ interface QuestionTextProps {
   text: string;
   id?: string;
   className?: string;
+  imageClassName?: string;
 }
 
-export default function QuestionText({ text, id, className = "" }: QuestionTextProps) {
+export default function QuestionText({ text, id, className = "", imageClassName = "" }: QuestionTextProps) {
   const parts: ReactNode[] = [];
   const fence = /^```([^\r\n]*)(?:\r?\n|$)/gm;
   let textStart = 0;
@@ -35,7 +36,7 @@ export default function QuestionText({ text, id, className = "" }: QuestionTextP
       parts.push(
         // Dynamic question images use their original URL without Next image optimization.
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={`image-${offset + match.index}`} src={src} alt="문제 이미지" loading="lazy" className="max-w-full h-auto" />,
+        <img key={`image-${offset + match.index}`} src={src} alt="문제 이미지" loading="lazy" className={`max-w-full h-auto ${imageClassName}`.trim()} />,
       );
       lastIndex = match.index + match[0].length;
     }

@@ -87,7 +87,12 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
     }
   }
   const answerLabel = (value: string | null) =>
-    value && choices[value] ? `${value}번: ${choices[value]}` : value;
+    value && choices[value] ? (
+      <>
+        {`${value}번: `}
+        <QuestionText text={choices[value]} className="inline" imageClassName="max-h-40 object-contain object-left" />
+      </>
+    ) : value;
   const userAnswer =
     item.type === "MCQ" ? answerLabel(item.selectedChoices) : item.responseText;
 
@@ -136,11 +141,11 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
           </div>
           <div className="min-w-0 wrap-break-word">
             <p className="font-semibold text-muted-foreground">답안</p>
-            <p className="font-question wrap-break-word whitespace-pre-wrap font-bold text-lg">
+            <div className="font-question wrap-break-word whitespace-pre-wrap font-bold text-lg">
               {hasAnswer(item) ? userAnswer : (
                 <span className="text-muted-foreground/70">미응답</span>
               )}
-            </p>
+            </div>
           </div>
         </div>
         {!item.isCorrect && (
@@ -150,11 +155,11 @@ function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
             </div>
             <div className="min-w-0 wrap-break-word">
               <p className="font-semibold text-primary">정답</p>
-              <p className="font-question wrap-break-word whitespace-pre-wrap font-bold text-lg text-primary">
+              <div className="font-question wrap-break-word whitespace-pre-wrap font-bold text-lg text-primary">
                 {item.type === "MCQ"
                   ? answerLabel(item.correctAnswer)
                   : item.correctAnswer}
-              </p>
+              </div>
             </div>
           </div>
         )}

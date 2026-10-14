@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import AttemptResultPage from "@/app/attempts/[id]/result/page";
 import QuestionCard from "@/components/QuestionCard";
 import { api } from "@/lib/api";
+import { apiUrl } from "@/lib/api-url";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7" }),
@@ -54,7 +55,7 @@ it("filters incorrect and unanswered answers separately while preserving questio
   expect(jump.getAttribute("href")).toBe("#review-question-15");
   fireEvent.click(jump);
   expect(document.activeElement).toBe(screen.getByRole("heading", { name: "문제 5" }));
-  expect(screen.getByText("2번: 둘째 선택지")).toBeTruthy();
+  expect(screen.getByText("둘째 선택지").parentElement?.textContent).toBe("2번: 둘째 선택지");
 
   fireEvent.click(screen.getByRole("button", { name: "미응답 (2)" }));
   expect(screen.getByRole("heading", { name: "문제 3" })).toBeTruthy();
@@ -63,6 +64,28 @@ it("filters incorrect and unanswered answers separately while preserving questio
   expect(screen.getByRole("status").textContent).toBe("미응답 문항 2개");
   fireEvent.click(screen.getByRole("button", { name: "전체 (5)" }));
   expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(5);
+});
+
+it("renders image choices for both the selected and correct answers with height limits", async () => {
+  vi.mocked(api).mockResolvedValue([{
+    ...correctItem,
+    choices: JSON.stringify({ 1: "[이미지: 정답#1.png]", 2: "내 보기 [이미지: selected.png]" }),
+    selectedChoices: "2",
+    isCorrect: false,
+  }]);
+  render(<AttemptResultPage />);
+  const images = await screen.findAllByRole("img", { name: "문제 이미지" });
+  expect(images.map((image) => image.getAttribute("src"))).toEqual([
+    apiUrl("/api/question-images/selected.png"),
+    apiUrl("/api/question-images/" + encodeURIComponent("정답#1.png")),
+  ]);
+  for (const image of images) {
+    expect(image.className).toContain("max-h-40");
+    expect(image.parentElement?.className).toContain("font-question");
+  }
+  expect(images[0].parentElement?.parentElement?.textContent).toBe("2번: 내 보기 ");
+  expect(images[1].parentElement?.parentElement?.textContent).toBe("1번: ");
+  expect(screen.queryByText(/\[이미지:/)).toBeNull();
 });
 
 it("explains empty filters and allows returning to all questions", async () => {

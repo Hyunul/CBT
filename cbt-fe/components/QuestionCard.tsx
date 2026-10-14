@@ -76,9 +76,7 @@ export default function QuestionCard({
                   checked={value === key}
                   onChange={() => onChange(key)}
                 />
-                <span className="min-w-0 wrap-break-word font-question font-medium text-card-foreground">
-                  {text}
-                </span>
+                <QuestionText text={text} className="min-w-0 wrap-break-word font-question font-medium text-card-foreground" imageClassName="max-h-40 object-contain object-left" />
               </label>
             </li>
           ))}

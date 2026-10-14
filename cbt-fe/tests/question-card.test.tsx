@@ -1,8 +1,24 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import QuestionCard from "@/components/QuestionCard";
+import { apiUrl } from "@/lib/api-url";
 
 afterEach(cleanup);
+
+it("renders image choice tokens inside the radio label with a height limit", () => {
+  const onChange = vi.fn();
+  render(<QuestionCard q={{ id: 7, text: "문제 [이미지: question.png]", type: "MCQ", choices: JSON.stringify({ 1: "[이미지: 보기#1.png]" }), score: 5 }} qNumber={1} value={undefined} onChange={onChange} />);
+  const radio = screen.getByRole("radio", { name: "문제 이미지" });
+  const label = document.querySelector(`label[for="${radio.id}"]`)!;
+  const image = label.querySelector("img")!;
+  expect(image.getAttribute("src")).toBe(apiUrl("/api/question-images/" + encodeURIComponent("보기#1.png")));
+  expect(image.className).toContain("max-h-40");
+  expect(image.parentElement?.className).toContain("font-question");
+  expect(screen.queryByText("[이미지: 보기#1.png]")).toBeNull();
+  expect(screen.getAllByRole("img")[0].className).not.toContain("max-h-40");
+  fireEvent.click(label);
+  expect(onChange).toHaveBeenCalledWith("1");
+});
 
 it("connects each radio to its option label and sends the stored choice key", () => {
   const onChange = vi.fn();
