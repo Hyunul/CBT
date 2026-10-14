@@ -48,17 +48,7 @@
 
 ## 아키텍처
 
-```mermaid
-flowchart LR
-  U[Browser] --> N[Nginx<br/>TLS · rate limit]
-  N -- "/" --> F[Next.js]
-  N -- "/api · /oauth2" --> B[Spring Boot]
-  B --> M[(MySQL 8)]
-  B --> R[(Redis 7)]
-  P[Prometheus] -- "/actuator/prometheus<br/>(내부망)" --> B
-  G[Grafana<br/>127.0.0.1 · SSH 터널] --> P
-  GA[GitHub Actions] -- "image push + SSH deploy" --> VM[GCP VM]
-```
+![시스템 아키텍처: 브라우저 → Nginx(TLS·요청 제한) → Next.js / Spring Boot → MySQL·Redis·문제 이미지, Prometheus·Grafana 관측, GitHub Actions CI/CD와 Python 데이터 파이프라인](docs/images/architecture.png)
 
 프론트엔드와 API가 같은 출처를 쓰므로 CORS·쿠키 문제 없이 Nginx 하나로 라우팅합니다. 인증과 응시 시작 경로는 IP별 요청 제한을 따로 겁니다.
 
