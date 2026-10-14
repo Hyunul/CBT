@@ -16,7 +16,6 @@ interface Exam {
   id: number;
   title: string;
   type?: ExamType;
-  round: number;
   questionCount: number;
   durationSec: number;
 }
@@ -83,7 +82,7 @@ export default function SeriesDetailPage() {
                   {exam.type === "PRACTICAL" ? "실기" : "필기"}
                 </span>
                 <h3 className="text-xl font-bold mb-1 group-hover:text-primary transition-colors">
-                  {exam.round ? `${exam.round}회차: ` : ""} {exam.title}
+                  {exam.title}
                 </h3>
                 <div className="flex gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
