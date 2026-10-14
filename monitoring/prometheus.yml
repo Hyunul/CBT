@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # 백엔드는 Docker 내부망에서만 /actuator/prometheus 를 연다(nginx 는 /actuator 를 외부로 라우팅하지 않음)
+  - job_name: cbt-backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["backend:8080"]

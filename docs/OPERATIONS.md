@@ -103,6 +103,30 @@ DB 포트는 외부에 공개하지 않습니다. 접근은 SSH를 거칩니다.
 
 운영 데이터를 수정하기 전에는 `mysqldump`로 백업하고, 조회 목적이면 읽기 전용 계정을 따로 만들어 사용합니다.
 
+### 운영 관측(Prometheus + Grafana)
+
+선택 구성입니다. 백엔드가 `/actuator/prometheus`로 지표를 내보내고, Prometheus가 15초마다 수집해 15일 보관하며, Grafana가 대시보드를 보여줍니다. nginx는 `/actuator`를 외부로 라우팅하지 않으므로 지표는 Docker 내부망에서만 수집됩니다.
+
+**켜기**: VM `~/CBT/.env`에 다음을 추가하고 다음 배포(또는 `docker compose up -d`)를 기다립니다. 배포가 `docker-compose.monitoring.yml`과 `monitoring/`을 함께 복사합니다.
+
+```sh
+COMPOSE_FILE=docker-compose.yml:docker-compose.https.yml:docker-compose.monitoring.yml
+GRAFANA_ADMIN_PASSWORD=<임의의 긴 비밀번호>
+```
+
+`GRAFANA_ADMIN_PASSWORD`가 없으면 Compose가 시작을 거부합니다. 로컬에서는 `docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d`로 켭니다.
+
+**접속**: Grafana는 VM의 `127.0.0.1:3001`에만 열립니다. SSH 터널로 접속한 뒤 브라우저에서 `http://localhost:3001`을 엽니다(사용자 `admin`).
+
+```sh
+ssh -i ~/.ssh/cbt_deploy -L 3001:127.0.0.1:3001 deploy@<VM 고정 IP>
+```
+
+**대시보드 "CBT 서비스 개요"**(`monitoring/grafana/dashboards/cbt.json`, 파일로 프로비저닝): 24시간 응시 시작·제출 수, 5xx 비율, 응시 API p95, 엔드포인트별 처리량·p95, 응답 상태, 분당 응시 흐름, Hikari 커넥션(사용·대기·최대), JVM 힙.
+
+- 업무 지표 `cbt_attempts_started_total`, `cbt_attempts_submitted_total`은 트랜잭션이 커밋된 뒤에만 셉니다. 재제출(멱등)은 세지 않습니다.
+- 경보 규칙(`monitoring/alerts.yml`): 백엔드 수집 실패 1분, 5xx 5% 초과 5분, 응시 API p95 1초 초과 5분, DB 커넥션 대기 5분. 알림 채널은 아직 없어 Prometheus·Grafana 화면에서 발화 상태를 확인합니다.
+
 Nginx는 Docker DNS를 주기적으로 조회해 재생성된 앱 컨테이너의 주소를 반영합니다. 수동 배포에서 Nginx 설정 파일을 수정했다면 `docker compose exec -T nginx nginx -t`로 검사한 후 `docker compose exec -T nginx nginx -s reload`를 실행합니다. 자동 배포는 이 단계를 포함합니다.
 
 ## OAuth

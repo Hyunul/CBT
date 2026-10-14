@@ -27,6 +27,7 @@
 | Backend | Java 17, Spring Boot 3.5, Spring Security, OAuth2 Client, JPA, Flyway, springdoc-openapi |
 | Data | MySQL 8 (시험·응시·답안·랭킹의 기준 데이터), Redis 7 (로그인 세션, Refresh Token, 일회용 OAuth 코드) |
 | Infra | Docker Compose, Nginx (리버스 프록시·TLS·요청 제한), GCP Compute Engine, Let's Encrypt |
+| Observability | Micrometer, Prometheus (경보 규칙), Grafana (파일 프로비저닝 대시보드) |
 | CI/CD | GitHub Actions: 테스트 → 통합 검증 → 커밋 SHA 이미지 빌드 → VM 배포 |
 
 ## 아키텍처
@@ -84,6 +85,7 @@ flowchart LR
 - **프론트엔드**: Vitest로 API 오류 처리, 동시 토큰 갱신, 게스트 키, 답안 복원, 타이머를 검증합니다.
 - **통합 검증**: CI가 임시 비밀값으로 MySQL·Redis를 포함한 전체 스택을 띄우고 `scripts/smoke_test.py`로 동시 제출·토큰 회전 경쟁·로그아웃 등을 확인한 뒤 정리합니다.
 - **배포**: 모든 검사를 통과하면 커밋 SHA 태그로 이미지를 빌드해 GCP VM에 배포합니다. 롤백은 이전 SHA를 `IMAGE_TAG`로 지정합니다.
+- **관측**: 백엔드가 엔드포인트별 지연 히스토그램, Hikari 풀, JVM, 업무 지표(커밋된 응시 시작·제출 수)를 내보내고, Prometheus가 수집해 5xx 비율·응시 API p95·DB 커넥션 대기 경보를 평가합니다. Grafana 대시보드는 코드로 관리하며 SSH 터널로만 접속합니다([운영 문서](docs/OPERATIONS.md#운영-관측prometheus--grafana)).
 
 ## 실행 방법
 

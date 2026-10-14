@@ -30,4 +30,12 @@ management:
     endpoints:
         web:
             exposure:
-                include: health
+                # prometheus 는 Docker 내부망의 Prometheus 만 수집한다. nginx 가 /actuator 를 라우팅하지 않아 외부에서 닿지 않는다.
+                include: health,prometheus
+    metrics:
+        tags:
+            application: cbt
+        distribution:
+            # 엔드포인트별 p95/p99 를 Prometheus 에서 histogram_quantile 로 계산하려면 버킷이 필요하다
+            percentiles-histogram:
+                http.server.requests: true

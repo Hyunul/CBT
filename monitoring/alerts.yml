@@ -1,0 +1,35 @@
+# Prometheus 경보 규칙. 알림 채널(Alertmanager·Slack 등)은 아직 없고, Prometheus/Grafana 화면에서 발화 상태를 본다.
+groups:
+  - name: cbt
+    rules:
+      - alert: BackendDown
+        expr: up{job="cbt-backend"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: 백엔드 지표 수집 실패(1분 이상)
+
+      - alert: HighServerErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{application="cbt",status=~"5.."}[5m]))
+            / sum(rate(http_server_requests_seconds_count{application="cbt"}[5m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: 5xx 응답 비율 5% 초과(5분)
+
+      - alert: SlowAttemptRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le) (
+            rate(http_server_requests_seconds_bucket{application="cbt",uri=~"/api/attempts/.*"}[5m]))) > 1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: 응시 API p95 1초 초과(5분)
+
+      - alert: DbPoolSaturated
+        expr: max(hikaricp_connections_pending{application="cbt"}) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: DB 커넥션 대기 요청이 5분째 있음

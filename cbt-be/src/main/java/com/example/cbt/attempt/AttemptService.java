@@ -26,6 +26,19 @@ public class AttemptService {
   private final QuestionRepository questions;
   private final UserRepository users;
   private final GradingService grading;
+  private final io.micrometer.core.instrument.MeterRegistry meters;
+
+  /** 업무 지표(cbt_attempts_*_total)는 커밋된 경우에만 센다. 롤백된 요청은 세지 않는다. */
+  private void countAfterCommit(String name) {
+    var counter = meters.counter(name);
+    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+        new org.springframework.transaction.support.TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            counter.increment();
+          }
+        });
+  }
 
   @Transactional
   public Attempt startAttempt(Long examId, Long userId, String guestToken) {
@@ -35,6 +48,7 @@ public class AttemptService {
     if (exam.getType() == ExamType.PRACTICAL)
       throw new ResponseStatusException(HttpStatus.CONFLICT, "실기 시험은 모의고사를 지원하지 않습니다.");
     if (questions.findByExamId(examId).isEmpty()) throw new IllegalStateException("문항이 없습니다.");
+    countAfterCommit("cbt.attempts.started");
     return attempts.save(
         Attempt.builder()
             .exam(exam)
@@ -96,6 +110,7 @@ public class AttemptService {
       a.setSubmittedAt(Instant.now());
       answers.saveAll(result.gradedAnswers());
       attempts.save(a);
+      countAfterCommit("cbt.attempts.submitted"); // 재제출(멱등)은 이 분기에 오지 않으므로 한 번만 센다
     }
     int total = questions.findByExamId(a.getExam().getId()).size();
     int correct =

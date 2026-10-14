@@ -88,6 +88,8 @@ public class SecurityConfig {
                         "/api/auth/providers",
                         "/api/auth/logout",
                         "/actuator/health",
+                        // Docker 내부망의 Prometheus 수집용. nginx 가 /actuator 를 외부로 라우팅하지 않는다.
+                        "/actuator/prometheus",
                         "/api/series/**",
                         "/api/ranking/**",
                         "/api/attempts/**")
