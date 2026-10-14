@@ -152,7 +152,7 @@ if __name__ == "__main__":
         COMPOSE += ["-p", args.project]
 
     SERIES = KINDS[args.kind]["series"]
-    src = args.dir or KINDS[args.kind]["dir"]
+    src = KINDS[args.kind]["dir"] = args.dir or KINDS[args.kind]["dir"]  # per_year 회차 계산도 이 경로를 본다
     files = sorted(glob.glob(os.path.join(src, "*-*.json")),
                    key=lambda f: round_order(args.kind, os.path.basename(f)[:-5]))
     if not files:
