@@ -93,10 +93,10 @@ request(f"/api/attempts/{attempt}/result", guest=key)
 member_attempt, _ = request(f"/api/attempts/start/{exam_id}", "POST", token=token)
 request(f"/api/attempts/{member_attempt}/submit", "POST", answer, token=token)
 request(f"/api/attempts/{member_attempt}/submit", "POST", answer, token=token)
-rank, _ = request(f"/api/ranking/exam/{exam_id}")
-assert rank[0]["score"] == 10
-global_rank, _ = request("/api/ranking/global/submissions")
-assert next(row for row in global_rank if row["username"] == username)["score"] == 1
+# 종목 랭킹: 게스트(동시 2회 제출)와 회원(연속 2회 제출) 응시가 각각 한 번씩만 세져야 한다
+series_rank, _ = request("/api/ranking/series")
+assert next(row for row in series_rank if row["seriesId"] == series["data"]["id"])["solvedCount"] == 2
+request(f"/api/ranking/exam/{exam_id}", expected=404)  # 사용자 랭킹 API는 제거됨
 request(f"/api/exams/{exam_id}/questions", "PUT", {"questions": [question]}, token=token, expected=409)
 
 old_refresh = login["data"]["refreshToken"]
