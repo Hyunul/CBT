@@ -1,73 +1,38 @@
 "use client";
 
-interface RankDto {
+import { Crown, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+
+interface SeriesRankDto {
   rank: number;
-  userId: number;
-  username: string;
-  score: number;
+  seriesId: number;
+  seriesName: string;
+  solvedCount: number;
 }
 
-import { Crown, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api, Page, Exam } from "@/lib/api";
-
 export default function RankingPage() {
-  const [rankings, setRankings] = useState<RankDto[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const [rankings, setRankings] = useState<SeriesRankDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRanking, setSelectedRanking] = useState("global");
-  const rankingTitle = selectedRanking === "global" ? "글로벌 응시 횟수 랭킹" : exams.find(e=>String(e.id)===selectedRanking)?.title ?? "선택된 시험";
 
-  /** -------------------------------
-   *  시험 목록 로딩 (Spring Pageable 대응)
-   * ------------------------------- */
   useEffect(() => {
-    api<{ data: Page<Exam> }>("/api/exams/published")
-      .then((res) => {
-        const raw = res.data;
-
-        if (raw && Array.isArray(raw.content)) {
-          setExams(raw.content);
-        } else {
-          console.error("Unexpected exam response:", raw);
-          setExams([]);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  /** -------------------------------
-   *  랭킹 로딩 (배열 또는 pageable 둘 다 대응)
-   * ------------------------------- */
-  useEffect(() => {
-    const url = selectedRanking === "global" ? "/api/ranking/global/submissions" : `/api/ranking/exam/${selectedRanking}`;
     let active = true;
-    api<RankDto[]>(url)
+    api<SeriesRankDto[]>("/api/ranking/series?limit=50")
       .then((res) => {
-        if(!active) return;
-        // Backend's RankingController directly returns List<RankDto>, not ApiResponse<List<RankDto>>
-        // So 'res' itself is the List<RankDto> array.
-        // No need for 'res.data'
-        const raw = res; // Fix: res is already the array
-
-        // ✔ 배열일 때 (가장 정상적인 케이스)
-        if (Array.isArray(raw)) {
-          setRankings(raw);
-          return;
+        if (!active) return;
+        if (Array.isArray(res)) {
+          setRankings(res);
+        } else {
+          console.error("Unexpected ranking response:", res);
+          setRankings([]);
         }
-
-        // ✔ undefiend 또는 이상한 응답
-        console.error("Unexpected ranking response:", raw);
-        setRankings([]);
       })
       .catch(console.error)
-      .finally(() => {if(active) setLoading(false);});
-    return ()=>{active=false;};
-  }, [selectedRanking]);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  /** ------------------------------- */
-  /** 스타일 함수 */
-  /** ------------------------------- */
   const getRankColor = (rank: number) => {
     if (rank === 1) return "text-yellow-500 bg-yellow-50";
     if (rank === 2) return "text-gray-500 bg-gray-50";
@@ -75,36 +40,17 @@ export default function RankingPage() {
     return "text-gray-500";
   };
 
-  const getScoreLabel = selectedRanking === "global" ? "응시 횟수" : "점수";
-
   return (
     <div className="container max-w-5xl mx-auto py-12 px-4">
-      {/* 헤더 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b pb-4">
-        <h1 className="min-w-0 text-2xl sm:text-4xl font-extrabold text-gray-900">
-          {rankingTitle}
+      <div className="mb-8 border-b pb-4">
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900">
+          자격증 종목 랭킹
         </h1>
-
-        <div className="w-full sm:w-80 sm:shrink-0">
-        <label htmlFor="ranking-filter" className="mb-2 block text-sm font-medium">랭킹 기준</label>
-        <select
-          id="ranking-filter"
-          value={selectedRanking}
-          onChange={(e) => {setLoading(true);setSelectedRanking(e.target.value);}}
-          className="input w-full p-3 font-medium"
-        >
-          <option value="global">글로벌 응시 횟수 랭킹</option>
-
-          {exams.map((exam) => (
-            <option key={exam.id} value={exam.id.toString()}>
-              {exam.title}
-            </option>
-          ))}
-        </select>
-        </div>
+        <p className="mt-3 text-muted-foreground">
+          많이 풀린 자격증 종목 순위입니다.
+        </p>
       </div>
 
-      {/* 테이블 */}
       <div className="bg-card border border-border rounded-2xl shadow-xl overflow-x-auto">
         {loading ? (
           <div className="flex justify-center items-center h-96">
@@ -112,47 +58,41 @@ export default function RankingPage() {
           </div>
         ) : rankings.length === 0 ? (
           <p className="text-center py-20 text-gray-500 text-xl font-medium">
-            현재 표시할 랭킹 데이터가 없습니다.
+            아직 풀이 기록이 없습니다.
           </p>
         ) : (
           <table className="w-full text-left table-fixed">
             <thead className="bg-primary/5 border-b border-primary/20">
               <tr>
-                <th className="p-2 sm:p-4 w-16 sm:w-24 whitespace-nowrap text-center text-primary font-semibold">
+                <th scope="col" className="p-2 sm:p-4 w-16 sm:w-24 whitespace-nowrap text-center text-primary font-semibold">
                   순위
                 </th>
-                <th className="p-2 sm:p-4 text-primary font-semibold">사용자</th>
-                <th className="p-2 sm:p-4 w-24 sm:w-32 whitespace-nowrap text-right text-primary font-semibold">
-                  {getScoreLabel}
+                <th scope="col" className="p-2 sm:p-4 text-primary font-semibold">
+                  자격증 종목
+                </th>
+                <th scope="col" className="p-2 sm:p-4 w-24 sm:w-32 whitespace-nowrap text-right text-primary font-semibold">
+                  풀이 횟수
                 </th>
               </tr>
             </thead>
-
             <tbody>
-              {rankings.map((user) => (
-                <tr
-                  key={user.userId}
-                  className="border-b last:border-none hover:bg-gray-50 transition"
-                >
+              {rankings.map((series) => (
+                <tr key={series.seriesId} className="border-b last:border-none hover:bg-gray-50 transition">
                   <td className="p-2 sm:p-4 font-bold text-lg text-center">
-                    <div
-                      className={`flex justify-center items-center gap-1 sm:gap-2 sm:p-2 rounded-lg ${getRankColor(
-                        user.rank
-                      )}`}
-                    >
-                      {user.rank <= 3 && (
+                    <div className={`flex justify-center items-center gap-1 sm:gap-2 sm:p-2 rounded-lg ${getRankColor(series.rank)}`}>
+                      {series.rank <= 3 && (
                         <Crown className="w-4 h-4 shrink-0 sm:w-5 sm:h-5 fill-current" />
                       )}
-                      {user.rank}
+                      {series.rank}
                     </div>
                   </td>
-
                   <td className="p-2 sm:p-4 font-semibold text-gray-800">
-                    <span className="block truncate" title={user.username}>{user.username}</span>
+                    <Link href={`/series/${series.seriesId}`} className="block truncate hover:underline" title={series.seriesName}>
+                      {series.seriesName}
+                    </Link>
                   </td>
-
                   <td className="p-2 sm:p-4 whitespace-nowrap text-right font-mono text-lg sm:text-xl text-gray-900 font-bold">
-                    {(user.score ?? 0).toLocaleString()}
+                    {series.solvedCount.toLocaleString()}
                   </td>
                 </tr>
               ))}

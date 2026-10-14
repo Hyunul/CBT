@@ -31,6 +31,7 @@ class PlatformSecurityTests {
   @Autowired QuestionRepository questions;
   @Autowired AttemptRepository attempts;
   @Autowired AnswerRepository answers;
+  @Autowired com.example.cbt.exam.series.ExamSeriesRepository seriesRepo;
   @Autowired JwtUtil jwt;
   @MockitoBean AuthService auth;
   Exam exam;
@@ -236,6 +237,30 @@ class PlatformSecurityTests {
     exam.setPublished(false);
     exams.save(exam);
     mvc.perform(get("/api/exams/" + exam.getId() + "/study")).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void seriesRankingCountsSubmittedWrittenAttemptsOnly() throws Exception {
+    var written = seriesRepo.save(com.example.cbt.exam.series.ExamSeries.builder().name("필기 종목").build());
+    var practical = seriesRepo.save(com.example.cbt.exam.series.ExamSeries.builder().name("실기 종목").build());
+    exam.setSeries(written);
+    exams.save(exam);
+    Exam study =
+        exams.save(
+            Exam.builder().title("실기").durationSec(600).isPublished(true).series(practical)
+                .type(ExamType.PRACTICAL).build());
+    Instant now = Instant.now();
+    attempts.save(Attempt.builder().exam(exam).submittedAt(now).build()); // 비회원 제출도 센다
+    attempts.save(Attempt.builder().exam(exam).submittedAt(now).build());
+    attempts.save(Attempt.builder().exam(exam).build()); // 제출 안 함
+    attempts.save(Attempt.builder().exam(study).submittedAt(now).build()); // 실기는 세지 않는다
+    mvc.perform(get("/api/ranking/series"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].rank").value(1))
+        .andExpect(jsonPath("$[0].seriesName").value("필기 종목"))
+        .andExpect(jsonPath("$[0].solvedCount").value(2));
+    mvc.perform(get("/api/ranking/exam/" + exam.getId())).andExpect(status().isNotFound());
   }
 
   @Test

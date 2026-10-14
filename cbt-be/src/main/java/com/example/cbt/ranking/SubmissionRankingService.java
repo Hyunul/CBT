@@ -1,8 +1,9 @@
 package com.example.cbt.ranking;
 
-import com.example.cbt.ranking.dto.RankDto;
+import com.example.cbt.exam.ExamType;
+import com.example.cbt.ranking.dto.SeriesRankDto;
 import jakarta.persistence.EntityManager;
-import java.util.*;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,43 +15,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class SubmissionRankingService {
   private final EntityManager em;
 
-  public List<RankDto> getExamRanking(Long examId, int limit) {
-    var query =
-        em.createQuery(
-                "select u.id,u.username,max(a.totalScore) from Attempt a join a.user u where"
-                    + " a.submittedAt is not null and a.exam.id=:exam and a.exam.isPublished=true"
-                    + " group by u.id,u.username order by max(a.totalScore) desc,u.id asc",
-                Object[].class)
-            .setParameter("exam", examId);
-    return ranks(query.setMaxResults(bounded(limit)).getResultList());
-  }
-
-  public List<RankDto> getGlobalSubmissionRanking(int limit) {
-    return ranks(
-        em.createQuery(
-                "select u.id,u.username,count(a) from Attempt a join a.user u where a.submittedAt"
-                    + " is not null and a.exam.isPublished=true group by u.id,u.username order by"
-                    + " count(a) desc,u.id asc",
-                Object[].class)
-            .setMaxResults(bounded(limit))
-            .getResultList());
-  }
-
-  private int bounded(int limit) {
+  /** 자격증 종목(시리즈)별 풀이 횟수 = 공개된 필기 시험의 제출 완료 응시 수(비회원 포함). 실기는 세지 않는다. */
+  public List<SeriesRankDto> getSeriesRanking(int limit) {
     if (limit < 1 || limit > 100) throw new IllegalArgumentException("limit must be 1..100");
-    return limit;
-  }
-
-  private List<RankDto> ranks(List<Object[]> rows) {
+    List<Object[]> rows =
+        em.createQuery(
+                "select s.id,s.name,count(a) from Attempt a join a.exam e join e.series s where"
+                    + " a.submittedAt is not null and e.isPublished=true and e.type=:written"
+                    + " group by s.id,s.name order by count(a) desc,s.id asc",
+                Object[].class)
+            .setParameter("written", ExamType.WRITTEN)
+            .setMaxResults(limit)
+            .getResultList();
     AtomicInteger rank = new AtomicInteger();
     return rows.stream()
         .map(
             r ->
-                new RankDto(
-                    rank.incrementAndGet(),
-                    (Long) r[0],
-                    (String) r[1],
-                    ((Number) r[2]).doubleValue()))
+                new SeriesRankDto(
+                    rank.incrementAndGet(), (Long) r[0], (String) r[1], ((Number) r[2]).longValue()))
         .toList();
   }
 }

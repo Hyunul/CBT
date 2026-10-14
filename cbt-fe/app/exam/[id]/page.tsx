@@ -8,7 +8,6 @@ import toast from "react-hot-toast";
 import ExamHero from "@/components/ExamHero";
 import ExamStats from "@/components/ExamStats";
 import QuestionPreview from "@/components/QuestionPreview";
-import RankingSnippet from "@/components/RankingSnippet";
 import RelatedExams from "@/components/RelatedExams";
 import ExamFAQ from "@/components/ExamFAQ";
 import PracticalStudy, { type StudyQuestion } from "@/components/PracticalStudy";
@@ -31,11 +30,6 @@ interface QuestionRes {
   text: string;
 }
 
-interface RankDto {
-  username: string;
-  score: number;
-}
-
 interface RelatedExam {
   id: number;
   title: string;
@@ -50,7 +44,6 @@ export default function ExamDetailPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [previewItems, setPreviewItems] = useState<QuestionRes[]>([]);
-  const [rankingItems, setRankingItems] = useState<RankDto[]>([]);
   const [relatedItems, setRelatedItems] = useState<RelatedExam[]>([]);
   const [studyItems, setStudyItems] = useState<StudyQuestion[]>([]);
 
@@ -71,10 +64,8 @@ export default function ExamDetailPage() {
           }
           return;
         }
-        const [questionRes, rankRes] = await Promise.all([
-          api<{ data: QuestionRes[] }>(`/api/exams/${examId}/questions`).catch(() => ({ data: [] })),
-          api<RankDto[]>(`/api/ranking/exam/${examId}?limit=3`).catch(() => []),
-        ]);
+        const questionRes = await api<{ data: QuestionRes[] }>(`/api/exams/${examId}/questions`)
+          .catch(() => ({ data: [] }));
         if (cancelled) return;
         const shuffled = [...(questionRes.data || [])];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -82,7 +73,6 @@ export default function ExamDetailPage() {
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         setPreviewItems(shuffled.slice(0, 3));
-        setRankingItems(Array.isArray(rankRes) ? rankRes : []);
         setExam(examRes.data);
       })
       .catch((err) => {
@@ -183,13 +173,6 @@ export default function ExamDetailPage() {
       />
 
       <QuestionPreview items={previewItems} />
-
-      <RankingSnippet
-        items={rankingItems.map((item) => ({
-          name: item.username,
-          score: Math.round(item.score ?? 0),
-        }))}
-      />
 
       <RelatedExams items={exam.series ? relatedItems : []} />
 

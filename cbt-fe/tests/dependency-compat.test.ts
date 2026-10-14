@@ -70,4 +70,4 @@ it("still enforces Next lint rules after replacing the glob dependency", async (
       (message) => message.ruleId === "@next/next/no-html-link-for-pages",
     ),
   ).toBe(true);
-});
+}, 30_000); // ESLint 초기화가 전체 병렬 실행 중에는 기본 5초를 넘긴다

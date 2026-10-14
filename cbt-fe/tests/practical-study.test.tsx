@@ -65,7 +65,6 @@ it("defaults exams without a type to the written mock exam flow", async () => {
   vi.mocked(api).mockImplementation(async (path) => {
     if (path === "/api/exams/7") return { data: { id: 7, title: "필기 기출", questionCount: 1, durationSec: 600 } };
     if (path === "/api/exams/7/questions") return { data: [{ id: 11, text: "미리보기 문항" }] };
-    if (path.startsWith("/api/ranking/")) return [];
     if (path === "/api/attempts/start/7") return 9;
     throw new Error(`Unexpected request: ${path}`);
   });
@@ -75,6 +74,10 @@ it("defaults exams without a type to the written mock exam flow", async () => {
   expect(screen.getByText("미리보기 문항")).toBeTruthy();
   expect(screen.queryByText("정답 보기")).toBeNull();
   expect(api).not.toHaveBeenCalledWith("/api/exams/7/study");
+  expect(screen.queryByRole("heading", { name: "상위 랭킹" })).toBeNull();
+  expect(vi.mocked(api).mock.calls.map(([path]) => path)).toEqual([
+    "/api/exams/7", "/api/exams/7/questions",
+  ]);
   fireEvent.click(start);
   await waitFor(() => expect(router.push).toHaveBeenCalledWith("/attempts/9"));
 });
