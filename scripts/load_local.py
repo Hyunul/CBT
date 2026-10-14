@@ -36,7 +36,7 @@ KINDS = {
     "security-written": {  # scripts/download_comcbt.py → parse_comcbt.py --cert 정보보안기사 결과
         "dir": "scraped/written-sec", "type": "WRITTEN", "series": "정보보안기사 필기",
         "series_desc": "정보보안기사 필기 기출문제 1~21회(전자문제집 CBT 교사용 자료)",
-        "title": "정보보안기사 필기 %s년 %s회",
+        "title": "정보보안기사 필기 %s년 %s회", "per_year": True,  # 파일은 통산 회차(1~21회)
         "desc": "출처: 전자문제집 CBT %s",
     },
 }
@@ -74,8 +74,14 @@ def round_order(kind, key):
 
 def exam_title(kind, key):
     year, rnd = key.split("-")
-    rnd = "1·2" if KINDS[kind].get("merged12") and rnd == "12" else rnd
-    return KINDS[kind]["title"] % (year, rnd)
+    k = KINDS[kind]
+    if k.get("per_year"):  # 파일 회차는 통산(2019-13) → 그 해의 몇 번째 시행(2019년 1회)
+        nums = sorted(int(os.path.basename(f)[:-5].split("-")[1])
+                      for f in glob.glob(os.path.join(k["dir"], year + "-*.json")))
+        rnd = str(nums.index(int(rnd)) + 1)
+    elif k.get("merged12") and rnd == "12":  # 2020년 1·2회 통합 시행
+        rnd = "1·2"
+    return k["title"] % (year, rnd)
 
 
 def update_sql(rounds, kind):

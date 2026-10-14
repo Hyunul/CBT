@@ -135,7 +135,7 @@
 학습과 포트폴리오 목적으로 공개 자료를 가공했습니다. 원본 PDF와 추출한 문항·이미지 데이터는 저장소에 포함하지 않고(위 화면 캡처에 보이는 일부 제외), 수집·파싱 스크립트만 공개합니다.
 
 - **정보처리기사 필기**: 전자문제집 CBT(comcbt.com)의 정보처리기사 필기 기출 교사용 자료, 2020년 1·2회 ~ 2022년 2회 8회차 ([`scripts/parse_comcbt.py`](scripts/parse_comcbt.py)).
-- **정보보안기사 필기**: 같은 사이트의 교사용 자료, 2013년 1회 ~ 2023년 21회 21회차 ([`scripts/download_comcbt.py`](scripts/download_comcbt.py)로 내려받아 같은 파서로 추출).
+- **정보보안기사 필기**: 같은 사이트의 교사용 자료, 2013년 1회 ~ 2023년 1회 21회차(연도별 회차로 표기) ([`scripts/download_comcbt.py`](scripts/download_comcbt.py)로 내려받아 같은 파서로 추출).
 - **정보처리기사 실기**: chobopark.tistory.com(Life-Journey)의 복원 문제, CC BY 4.0. 수험생 기억으로 복원한 문제라 실제 시험과 다를 수 있습니다 ([`scripts/scrape_chobopark.py`](scripts/scrape_chobopark.py)).
 
 ## 실행 방법
