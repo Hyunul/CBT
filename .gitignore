@@ -17,3 +17,4 @@ scraped/
 question-images/
 loadtest/results/
 .playwright-mcp/
+__pycache__/
