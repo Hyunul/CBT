@@ -20,6 +20,10 @@ import urllib.request
 from html.parser import HTMLParser
 
 ROUNDS = {
+    "2020-1": 196, "2020-2": 195, "2020-3": 194, "2020-4": 192,
+    "2021-1": 191, "2021-2": 210, "2021-3": 217,
+    "2022-1": 271, "2022-2": 423, "2022-3": 424,
+    "2023-1": 372, "2023-2": 420, "2023-3": 453,
     "2024-1": 476, "2024-2": 483, "2024-3": 495,
     "2025-1": 540, "2025-2": 554, "2025-3": 558,
     "2026-1": 561, "2026-2": 562,
@@ -29,7 +33,7 @@ BLOCK = {"p", "div", "tr", "li", "h1", "h2", "h3", "h4", "figure", "table"}
 VOID = {"br", "img", "hr", "input", "meta", "link", "source", "wbr", "col"}
 QSTART = re.compile(r"^[ \t]*(\d{1,2})\.[ \t]*", re.M)
 MORELESS = re.compile(
-    r'<div data-ke-type="moreLess".*?<div class="moreless-content">(.*?)</div>\s*</div>', re.S)
+    r'<div[^>]*data-ke-type="moreLess".*?<div class="moreless-content">(.*?)</div>\s*</div>', re.S)  # 속성 순서는 글마다 다름
 SCORE = 5  # 실기 100점 / 20문항
 
 
@@ -127,16 +131,18 @@ def to_question(no, text, answer, image_names, round_key):
     for i, name in enumerate(image_names):
         text = text.replace("[[IMG%d]]" % i, "[이미지: %s]" % name)
     tags = ["정보처리기사", "실기", round_key] + (["이미지"] if image_names else [])
+    # 2020~2023년 글은 '더보기' 안에 정답 뒤 빈 줄을 두고 작성자 해설을 붙였다 → 첫 빈 줄에서 나눈다
+    answer, _, explanation = answer.partition("\n\n")
     return {
         "text": text,
         "type": "SUBJECTIVE",
         "choices": None,
         "answerKey": None,
         # 채점은 쉼표로 나눈 후보 중 하나와 완전일치 → 정답 속 쉼표는 "\," 로 이스케이프
-        "answerKeywords": answer.replace(",", "\\,"),
+        "answerKeywords": answer.strip().replace(",", "\\,"),
         "score": SCORE,
         "tags": ",".join(tags),
-        "explanation": None,
+        "explanation": explanation.strip() or None,
     }
 
 
@@ -147,8 +153,8 @@ def review_flags(q):
         flags.append("정답 없음")
     if "\n" in a:
         flags.append("정답 여러 줄(부분 정답 문항)")
-    if len(a) > 255:
-        flags.append("정답 255자 초과(answer_keywords VARCHAR(255))")
+    if len(a) > 150:
+        flags.append("정답 %d자(해설이 섞였는지 확인)" % len(a))
     if "이미지" in q["tags"]:
         flags.append("이미지 포함")
     return flags
@@ -220,6 +226,11 @@ def self_test():
     assert "[이미지: 2024-1_q02_1.png]" in q["text"] and "사번 | 이름" in q["text"], q["text"]
     assert "소개글" not in text and "Color Scripter" not in text and "cs" not in text.split()
     assert q["answerKeywords"] == "ㄱ: A\\, ㄴ: B", q["answerKeywords"]
+    old = to_question(3, "서술하시오.", "테스트 원리\n\n해설 첫 줄, 둘째\n- 항목", [], "2020-1")
+    assert old["answerKeywords"] == "테스트 원리" and old["explanation"] == "해설 첫 줄, 둘째\n- 항목", old
+    assert parse('<div class="tt_article_useless_p_margin"><p><b>1. 문제</b></p>'
+                 '<div data-text-less="닫기" data-ke-type="moreLess"><a>더보기</a>'
+                 '<div class="moreless-content"><p>답</p></div></div>')[0][2] == "답"  # 속성 순서가 다른 글
     assert review_flags(q) == ["이미지 포함"], review_flags(q)
     print("self-test ok")
 
