@@ -26,11 +26,31 @@ MID_X = 298  # 2단 편집: 왼쪽 단 / 오른쪽 단 경계
 SOURCE = "https://www.comcbt.com/xe/iz"
 
 
+HANGUL = re.compile("[가-힣]")
+LATIN = re.compile("[A-Za-z]")
+SQL_WORDS = {"SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "ON", "SET", "BY", "INTO", "VALUES", "JOIN",
+             "HAVING", "IN", "IS", "LIKE", "AS", "UPDATE", "DELETE", "INSERT", "GROUP", "ORDER", "DISTINCT"}
+
+
+def needs_space(a, b):
+    """공백 없이 끊긴 줄 경계에 공백이 있어야 하는가.
+
+    한글은 단어 중간에서도 줄이 바뀌므로 기본은 붙인다. 다만 PDF가 줄 끝 공백을 지운 경우를 되살린다:
+    한글→영문(`FROM 푸드|ORDER`), `;`·따옴표→영문(`j = 9;|int`), SQL 예약어→한글(`WHERE|공급자명`).
+    영문→한글은 조사(`SQL|은`, `Hybrid|에`)라 붙인다.
+    """
+    x, y = a.rstrip()[-1], b.lstrip()[0]
+    if LATIN.match(y) and (HANGUL.match(x) or x in ";'\""):
+        return True
+    words = a.split()
+    return bool(HANGUL.match(y)) and bool(words) and words[-1] in SQL_WORDS
+
+
 def join(a, b):
-    """줄바꿈으로 끊긴 문장을 잇는다(한글은 공백 없이 끊기므로 공백을 넣지 않는다)."""
+    """줄바꿈으로 끊긴 문장을 잇는다(한글은 공백 없이 끊기므로 대개 공백을 넣지 않는다)."""
     if not a.strip():
         return b.lstrip()
-    if a.endswith(" ") or b.startswith(" "):
+    if a.endswith(" ") or b.startswith(" ") or (b.strip() and needs_space(a, b)):
         return a.rstrip() + " " + b.lstrip()
     return a + b.lstrip()  # b 의 끝 공백은 다음 줄과 띄어 잇기 위해 남긴다(최종 저장 시 strip)
 
@@ -54,7 +74,9 @@ def page_items(page):
             t = "".join(c["c"] for c in chars)
             if t.strip() and "comcbt.com" not in t:
                 marks = [(c["bbox"][0], c["bbox"][1]) for c in chars if MARK.match(c["c"])]
-                items.append((col, l["bbox"][1], "txt", t, l["bbox"][0], marks))
+                # 단은 줄마다 정한다: 한 블록이 양쪽 단에 걸치기도 한다(2021-1 마지막 쪽 안내문이 왼쪽 문항에 붙던 문제)
+                line_col = 0 if l["bbox"][0] < MID_X else 1
+                items.append((line_col, l["bbox"][1], "txt", t, l["bbox"][0], marks))
     return sorted(items, key=lambda i: (i[0], i[1]))
 
 
@@ -205,6 +227,8 @@ def run(src, out, images_dir):
                 report.append("%s Q%d: 정답 없음" % (key, q["no"]))
             if len(q["choices"]) != 4 or not all(c.strip() for c in q["choices"]):
                 report.append("%s Q%d: 보기 %d개 또는 빈 보기" % (key, q["no"], len(q["choices"])))
+            if "전자문제집" in q["text"] + "".join(q["choices"]):
+                report.append("%s Q%d: 사이트 안내문이 문항에 섞임" % (key, q["no"]))
             result.append(to_question(q, key, ans))
         nums = [q["no"] for q in qs]
         if nums != list(range(1, len(nums) + 1)) or len(nums) != 100:
@@ -221,6 +245,13 @@ def self_test():
     assert join("시간의 흐름을 나", "타낸다.") == "시간의 흐름을 나타낸다."
     assert join("모델링 ", "하는 것이다.") == "모델링 하는 것이다."
     assert join(join("설명으로 틀린 ", "것은? "), "(단, 1)") == "설명으로 틀린 것은? (단, 1)"
+    # PDF가 줄 끝 공백을 지운 경계는 되살리고, 한글 단어 중간·조사는 붙인다
+    assert join("SELECT 제품명 FROM 푸드", "ORDER BY 판매량 DESC;") == "SELECT 제품명 FROM 푸드 ORDER BY 판매량 DESC;"
+    assert join("int i = 7, j = 9;", "int k;") == "int i = 7, j = 9; int k;"
+    assert join("WHERE 지점명 = '강남지점'", "ORDER BY") == "WHERE 지점명 = '강남지점' ORDER BY"
+    assert join("SELECT * FROM 공급자 WHERE", "공급자명 LIKE '%대%'") == "SELECT * FROM 공급자 WHERE 공급자명 LIKE '%대%'"
+    assert join("절차형 SQL", "은?") == "절차형 SQL은?" and join("구축유형 중 Hybrid", "에 대한") == "구축유형 중 Hybrid에 대한"
+    assert join("중국어과 학생 30", "명") == "중국어과 학생 30명" and join("비기능적", "(Nonfunctional)") == "비기능적(Nonfunctional)"
     assert answer_table("1 2 3 ② ① ④ 4 5 ③ ①") == {1: 2, 2: 1, 3: 4, 4: 3, 5: 1}
     doc = fitz.open()
     p = doc.new_page(width=595, height=841)
